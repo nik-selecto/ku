@@ -1,24 +1,20 @@
 import crypto from 'crypto';
 import moment from 'moment';
 import QueryString from 'qs';
-import { config } from 'dotenv';
+import { API_KEY, API_PASSPHRASE, API_SECRET } from '../../credentials';
 
-config();
-
-if (process.env.MODE === 'dev') {
-    process.env.API_KEY = process.env.SANDBOX_API_KEY;
-    process.env.API_SECRET = process.env.SANDBOX_API_SECRET;
-    process.env.API_PASSPHRASE = process.env.SANDBOX_API_PASSPHRASE;
-}
 export class SignGenerator {
-    public static create() {
-        const { PASSPHRASE, API_KEY, API_SECRET } = process.env;
+    // eslint-disable-next-line no-use-before-define
+    private static signGeneratorSingleton: SignGenerator;
 
-        return new SignGenerator(
-            API_KEY,
-            API_SECRET,
-            PASSPHRASE,
-        );
+    public static create() {
+        return SignGenerator.signGeneratorSingleton
+            ? SignGenerator.signGeneratorSingleton
+            : new SignGenerator(
+                API_KEY,
+                API_SECRET,
+                API_PASSPHRASE,
+            );
     }
 
     public generateHeaders(
