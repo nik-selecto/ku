@@ -25,6 +25,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.26.1",
     "crypto": "^1.0.1",
     "dotenv": "^16.0.0",
     "moment": "^2.29.1",
