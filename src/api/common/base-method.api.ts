@@ -3,12 +3,12 @@ import { HOST } from '../enums/endpoint.enum';
 import { SignGenerator } from './sign-generator.api';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export class BaseMethod<TRes, TParams = any, TBody = any> {
+export class BaseMethod<TRes, TParams extends object = any, TBody extends object = any> {
     protected constructor(
       private method: 'GET' | 'POST',
       protected endpoint: string,
-      protected params?: object,
-      protected body?: object,
+      protected params?: TParams,
+      protected body?: TBody,
     ) { }
 
     protected paramsResolver: (params: any) => any = (params: any) => params;
