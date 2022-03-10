@@ -1,8 +1,9 @@
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
-      // TODO create .env file with your secrets
-      // TODO add their type declarations to this interface
+      PASSPHRASE?: string;
+      API_KEY?: string;
+      API_SECRET?: string;
     }
   }
 }
