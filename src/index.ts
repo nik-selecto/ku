@@ -1,9 +1,10 @@
-import { KuRequest } from './api/index.api';
+import { ChannelEnum } from './redis/global-state';
+import { KuRedis } from './redis/ku-redis';
 
 async function main() {
-    const res = await KuRequest.GET['/api/v1/accounts'].setParams({ type: 'trade' }).exec();
+    const ku = await KuRedis.generate(ChannelEnum.WS_NEW);
 
-    console.log(res);
+    ku.to(ChannelEnum.WS_NEW).publish({ hello: 'world' });
 }
 
 main().catch((error) => {
