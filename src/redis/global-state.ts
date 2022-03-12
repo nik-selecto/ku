@@ -10,3 +10,7 @@ export const GLOBAL_STATE: Record<ChannelEnum, StateTumbler> = {
     [ChannelEnum.WS_NEW]: 'not',
     [ChannelEnum.WS_OPEN]: 'not',
 };
+
+export type REDIS_DB = {
+
+}

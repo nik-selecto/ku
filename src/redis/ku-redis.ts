@@ -1,6 +1,8 @@
 /* eslint-disable max-classes-per-file */
 import Redis, { Redis as TRedis } from 'ioredis';
-import { ChannelEnum, GLOBAL_STATE } from './global-state';
+import {
+    ChannelEnum, GLOBAL_STATE, REDIS_DB,
+} from './global-state';
 
 async function setDefaultState(pub: TRedis) {
     await Promise.all(Object.entries(GLOBAL_STATE).map(([channel, tumbler]) => pub.set(channel, tumbler)));
@@ -10,7 +12,7 @@ export class KuRedis {
 
     private constructor(private pub: TRedis, private sub: TRedis) {}
 
-    public static async generate(...channels: ChannelEnum[]) {
+    public static async generate(...channels: [ChannelEnum]) {
         const pub = new Redis();
         const sub = pub.duplicate();
 
@@ -22,6 +24,34 @@ export class KuRedis {
         ]);
 
         return new KuRedis(pub, sub);
+    }
+
+    public async set(data: Partial<REDIS_DB>) {
+        await Promise.all(Object.entries(data).map(([key, value]) => this.pub.set(key, JSON.stringify(value))));
+    }
+
+    public async get(key: keyof REDIS_DB) {
+        const res = await this.pub.get(key);
+
+        return res
+            ? JSON.parse(res)
+            : null;
+    }
+
+    public async getState() {
+        const thisIs = this;
+        const entries = await Promise
+            .all((Object.keys(GLOBAL_STATE) as ChannelEnum[])
+                .map((key) => new Promise((resolve) => {
+                    thisIs.pub.get(key).then((value) => resolve({ [key]: value || '' }));
+                }))) as Record<ChannelEnum, string>[];
+
+        return entries.reduce((acc, item) => {
+            const [[key, value]] = Object.entries(item);
+            (acc as any)[key] = value;
+
+            return acc;
+        }, {} as typeof GLOBAL_STATE);
     }
 
     public on<T extends object>(channel: ChannelEnum) {
@@ -77,5 +107,9 @@ export class KuRedis {
                 };
             },
         };
+    }
+
+    public async close() {
+        return Promise.all([this.pub.disconnect(), this.sub.disconnect()]);
     }
 }
