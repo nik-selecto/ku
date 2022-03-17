@@ -15,4 +15,4 @@ export enum GetEndpointEnum {
 
 export const HOST = process.env.MODE === 'prod'
     ? 'https://api.kucoin.com' as const
-    : 'https://sandbox.kucoin.com' as const;
+    : 'https://openapi-sandbox.kucoin.com' as const;

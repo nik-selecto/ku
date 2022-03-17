@@ -28,6 +28,7 @@
         "@typescript-eslint"
     ],
     "rules": {
+        "no-empty-pattern":"off",
         "indent": [
             "error",
             4,

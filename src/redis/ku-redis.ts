@@ -12,16 +12,18 @@ export class KuRedis {
 
     private constructor(private pub: TRedis, private sub: TRedis) {}
 
-    public static async generate(...channels: [ChannelEnum]) {
+    public static async generate(channels?: ChannelEnum[]) {
         const pub = new Redis();
         const sub = pub.duplicate();
 
         await Promise.all([
-            sub.subscribe(channels),
+            sub.subscribe(channels && channels.length ? channels : Object.values(ChannelEnum)),
             KuRedis.isDefaultReady
                 ? Promise.resolve()
                 : setDefaultState(pub),
         ]);
+
+        KuRedis.isDefaultReady = true;
 
         return new KuRedis(pub, sub);
     }
@@ -54,57 +56,64 @@ export class KuRedis {
         }, {} as typeof GLOBAL_STATE);
     }
 
+    public _pub() {
+        return this.pub;
+    }
+
+    public _sub() {
+        return this.sub;
+    }
+
     public on<T extends object>(channel: ChannelEnum) {
         const thisIs: KuRedis = this;
 
         return {
-            do(cb: (data: T) => void) {
+            do(cb: (data: T) => void, updateState?: Partial<typeof GLOBAL_STATE>, updateOnEachEvent: boolean = true) {
+                let isFirst = true;
+
                 thisIs.sub.on('message', (_channel: string, _data: string) => {
                     if (_channel !== channel) return;
 
                     cb(JSON.parse(_data));
-                });
 
-                return {
-                    async setState(state: Partial<typeof GLOBAL_STATE>) {
-                        await Promise.all(Object.entries((state)).map(([key, value]) => thisIs.pub.set(key, value)));
-                    },
-                };
+                    if (updateState && (isFirst || updateOnEachEvent)) {
+                        Promise.all(Object.entries((updateState)).map(([key, value]) => thisIs.pub.set(key, value)))
+                            .then(() => {
+                                isFirst = false;
+                            });
+                    }
+                });
             },
         };
     }
 
     public to(channel: ChannelEnum) {
         const thisIs: KuRedis = this;
-        const action = (_data: object) => thisIs.pub.publish(channel as string, JSON.stringify(_data));
+        const action = async (_data: object, updateState?: Partial<typeof GLOBAL_STATE>) => {
+            await thisIs.pub.publish(channel as string, JSON.stringify(_data));
+
+            if (!updateState) return;
+
+            await Promise.all(Object.entries((updateState)).map(([key, value]) => thisIs.pub.set(key, value)));
+        };
 
         return {
-            async onlyIfStateLike(state: Partial<typeof GLOBAL_STATE>) {
-                const entries = Object.entries(state);
-                const currentState = await Promise.all(entries.map(([key]) => thisIs.pub.get(key)));
-
+            onlyIfStateLike(state: Partial<typeof GLOBAL_STATE>) {
                 return {
-                    async publish(data: object) {
-                        if (!entries.some(([value], i) => value !== currentState[i])) {
-                            await action(data);
-                        }
+                    async publish(data: object, updateState?: Partial<typeof GLOBAL_STATE>) {
+                        const entries = Object.entries(state);
+                        const currentState = await Promise.all(entries.map(([key]) => thisIs.pub.get(key)));
 
-                        return {
-                            async setState(updateState: Partial<typeof GLOBAL_STATE>) {
-                                await Promise.all(Object.entries((updateState)).map(([key, value]) => thisIs.pub.set(key, value)));
-                            },
-                        };
+                        entries.some(([, value], i) => value !== currentState[i]);
+
+                        if (entries.some(([, value], i) => value !== currentState[i])) return;
+
+                        await action(data, updateState);
                     },
                 };
             },
-            async publish(data: object) {
-                await action(data);
-
-                return {
-                    async setState(state: Partial<typeof GLOBAL_STATE>) {
-                        await Promise.all(Object.entries((state)).map(([key, value]) => thisIs.pub.set(key, value)));
-                    },
-                };
+            async publish(data: object, updateState?: Partial<typeof GLOBAL_STATE>) {
+                await action(data, updateState);
             },
         };
     }
