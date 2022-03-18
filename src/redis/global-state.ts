@@ -1,14 +1,30 @@
 /* eslint-disable no-shadow */
-export type StateTumbler = 'not' | 'yes';
-
 export enum ChannelEnum {
     WS_OPEN = 'kuWs.open()',
+    WS_CLOSE = 'kuWs.close()'
 }
 
-export const GLOBAL_STATE: Record<ChannelEnum, StateTumbler> = {
-    [ChannelEnum.WS_OPEN]: 'not',
+type wsStateType = 'connecting' | 'open' | 'closing' | 'closed';
+
+export const wsStateResolver = ([
+    'connecting',
+    'open',
+    'closing',
+    'closed',
+] as const).reduce((acc, state, digit) => {
+    acc.digitState[digit] = state;
+    acc.stateDigit[state] = digit;
+
+    return acc;
+}, {
+    stateDigit: {} as Record<wsStateType, number>,
+    digitState: {} as Record<number, wsStateType>,
+});
+
+export type STATE_TYPE = {
+    WS: wsStateType,
+}
+
+export const STATE: STATE_TYPE = {
+    WS: 'closed',
 };
-
-export type REDIS_DB = {
-
-}

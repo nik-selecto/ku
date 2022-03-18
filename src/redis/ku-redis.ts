@@ -1,16 +1,16 @@
 /* eslint-disable max-classes-per-file */
 import Redis, { Redis as TRedis } from 'ioredis';
 import {
-    ChannelEnum, GLOBAL_STATE, REDIS_DB,
+    ChannelEnum, STATE, STATE_TYPE,
 } from './global-state';
 
 async function setDefaultState(pub: TRedis) {
-    await Promise.all(Object.entries(GLOBAL_STATE).map(([channel, tumbler]) => pub.set(channel, tumbler)));
+    await Promise.all(Object.entries(STATE).map(([k, v]) => pub.set(k, v)));
 }
 export class KuRedis {
     private static isDefaultReady = false;
 
-    private constructor(private pub: TRedis, private sub: TRedis) {}
+    private constructor(private pub: TRedis, private sub: TRedis) { }
 
     public static async generate(channels?: ChannelEnum[]) {
         const pub = new Redis();
@@ -28,11 +28,11 @@ export class KuRedis {
         return new KuRedis(pub, sub);
     }
 
-    public async set(data: Partial<REDIS_DB>) {
-        await Promise.all(Object.entries(data).map(([key, value]) => this.pub.set(key, JSON.stringify(value))));
+    public async set(data: Partial<STATE_TYPE>) {
+        await Promise.all(Object.entries(data).map(([key, value]) => this.pub.set(key, typeof value === 'object' ? JSON.stringify(value) : value)));
     }
 
-    public async get(key: keyof REDIS_DB) {
+    public async get(key: keyof STATE_TYPE) {
         const res = await this.pub.get(key);
 
         return res
@@ -43,7 +43,7 @@ export class KuRedis {
     public async getState() {
         const thisIs = this;
         const entries = await Promise
-            .all((Object.keys(GLOBAL_STATE) as ChannelEnum[])
+            .all((Object.keys(STATE) as ChannelEnum[])
                 .map((key) => new Promise((resolve) => {
                     thisIs.pub.get(key).then((value) => resolve({ [key]: value || '' }));
                 }))) as Record<ChannelEnum, string>[];
@@ -53,7 +53,7 @@ export class KuRedis {
             (acc as any)[key] = value;
 
             return acc;
-        }, {} as typeof GLOBAL_STATE);
+        }, {} as STATE_TYPE);
     }
 
     public _pub() {
@@ -64,43 +64,24 @@ export class KuRedis {
         return this.sub;
     }
 
-    public on<T extends object>(channel: ChannelEnum) {
-        const thisIs: KuRedis = this;
+    public on<T extends {} = {}>(channel: ChannelEnum, cb: (data: T) => void) {
+        this.sub.on('message', (_channel: string, _data: string) => {
+            if (_channel !== channel) return;
 
-        return {
-            do(cb: (data: T) => void, updateState?: Partial<typeof GLOBAL_STATE>, updateOnEachEvent: boolean = true) {
-                let isFirst = true;
-
-                thisIs.sub.on('message', (_channel: string, _data: string) => {
-                    if (_channel !== channel) return;
-
-                    cb(JSON.parse(_data));
-
-                    if (updateState && (isFirst || updateOnEachEvent)) {
-                        Promise.all(Object.entries((updateState)).map(([key, value]) => thisIs.pub.set(key, value)))
-                            .then(() => {
-                                isFirst = false;
-                            });
-                    }
-                });
-            },
-        };
+            cb(JSON.parse(_data));
+        });
     }
 
     public to(channel: ChannelEnum) {
         const thisIs: KuRedis = this;
-        const action = async (_data: object, updateState?: Partial<typeof GLOBAL_STATE>) => {
+        const action = async (_data: object) => {
             await thisIs.pub.publish(channel as string, JSON.stringify(_data));
-
-            if (!updateState) return;
-
-            await Promise.all(Object.entries((updateState)).map(([key, value]) => thisIs.pub.set(key, value)));
         };
 
         return {
-            onlyIfStateLike(state: Partial<typeof GLOBAL_STATE>) {
+            onlyIfStateLike(state: Partial<STATE_TYPE>) {
                 return {
-                    async publish(data: object, updateState?: Partial<typeof GLOBAL_STATE>) {
+                    async publish(data: Record<string, any>) {
                         const entries = Object.entries(state);
                         const currentState = await Promise.all(entries.map(([key]) => thisIs.pub.get(key)));
 
@@ -108,12 +89,12 @@ export class KuRedis {
 
                         if (entries.some(([, value], i) => value !== currentState[i])) return;
 
-                        await action(data, updateState);
+                        await action(data);
                     },
                 };
             },
-            async publish(data: object, updateState?: Partial<typeof GLOBAL_STATE>) {
-                await action(data, updateState);
+            async publish(data: Record<string, any>) {
+                await action(data);
             },
         };
     }
