@@ -1,12 +1,14 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 
+type RedisValueType = 'on' | 'off';
+type WsValueType = 'open' | 'close';
 type StateType = {
-    ws: 'open' | 'close',
-    redis: 'up' | 'down',
+    ws: WsValueType,
+    redis: RedisValueType,
 }
 
 const beginState: StateType = {
-    redis: 'down',
+    redis: 'on',
     ws: 'close',
 };
 
@@ -16,11 +18,14 @@ const STATE_PROPOSITION_CHANNEL = 'ask-state' as const;
 export class RedisController {
     private static isFirstRun = true;
 
+    private onRedisOff?: () => Promise<void> | void;
+
     private constructor(private pub: RedisType, private sub: RedisType) { }
 
     public static async init() {
         const pub = new Redis();
         const sub = pub.duplicate();
+        const redisController = new RedisController(pub, sub);
 
         if (RedisController.isFirstRun) {
             pub.set(STATE_CHANNEL, JSON.stringify(beginState));
@@ -29,12 +34,32 @@ export class RedisController {
 
         await sub.subscribe(STATE_CHANNEL, STATE_PROPOSITION_CHANNEL);
 
-        return new RedisController(pub, sub);
+        sub.on('message', (channel, data) => {
+            if (channel !== STATE_PROPOSITION_CHANNEL) return;
+
+            const stateProposition = JSON.parse(data) as Partial<StateType>;
+
+            if (stateProposition.redis !== 'off') return;
+
+            redisController.onRedisOff?.();
+            pub.disconnect();
+            sub.disconnect();
+
+            console.info('Disconnect from Redis');
+        });
+        console.info('Connect to Redis');
+
+        return redisController;
+    }
+
+    public setOnRedisOff(onRedisOff: () => Promise<void> | void) {
+        this.onRedisOff = onRedisOff;
     }
 
     public rewriteState(data: Partial<StateType>) {
         const _pub = this.pub;
         let updateState = '';
+
         _pub.get(STATE_CHANNEL).then((state) => {
             updateState = JSON.stringify({ ...JSON.parse(state!), ...data });
             _pub.set(STATE_CHANNEL, updateState);

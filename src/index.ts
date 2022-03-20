@@ -6,8 +6,8 @@ async function main() {
 
     await wsInitialization();
 
-    rC.onState({ ws: 'open' }, (state) => {
-        console.log('ws is open!', state);
+    rC.onState({ ws: 'open' }, (state, _rC) => {
+        _rC.makeStateProposition({ redis: 'off' });
     });
 
     rC.makeStateProposition({ ws: 'open' });

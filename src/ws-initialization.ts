@@ -5,18 +5,21 @@ import { KuRequest } from './api/index.api';
 import { RedisController } from './redis-controller';
 
 export async function wsInitialization() {
-    const rc = await RedisController.init();
+    const redisController = await RedisController.init();
 
-    rc.onStateProposition({ ws: 'open' }, async (state, rC) => {
+    redisController.onStateProposition({ ws: 'open' }, async (state, rC) => {
         const { instanceServers, token } = (await KuRequest.POST['/api/v1/bullet-private'].exec())!;
         const [server] = instanceServers;
         const id = v4();
         const ws = new Ws(`${server.endpoint}${qs.stringify({ token, id }, { addQueryPrefix: true })}`);
 
         ws.on('open', () => {
+            console.info('ws.on("open")');
+            rC.setOnRedisOff(() => {
+                ws.close();
+                console.info('ws.close()');
+            });
             rC.rewriteState({ ws: 'open' });
         });
-
-        console.log('success');
     }, { ws: 'close' });
 }
