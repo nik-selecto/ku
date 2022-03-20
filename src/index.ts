@@ -1,12 +1,16 @@
 import { RedisController } from './redis-controller';
+import { wsInitialization } from './ws-initialization';
 
 async function main() {
-    const rc = await RedisController.init();
+    const rC = await RedisController.init();
 
-    rc.on({ ws: 'open' }, (state) => {
-        console.log(state);
+    await wsInitialization();
+
+    rC.onState({ ws: 'open' }, (state) => {
+        console.log('ws is open!', state);
     });
-    rc.rewriteState({ ws: 'open' });
+
+    rC.makeStateProposition({ ws: 'open' });
 }
 
 main().catch((error) => {

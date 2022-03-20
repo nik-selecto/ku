@@ -10,6 +10,9 @@ const beginState: StateType = {
     ws: 'close',
 };
 
+const STATE_CHANNEL = 'state' as const;
+const STATE_PROPOSITION_CHANNEL = 'ask-state' as const;
+
 export class RedisController {
     private static isFirstRun = true;
 
@@ -20,11 +23,11 @@ export class RedisController {
         const sub = pub.duplicate();
 
         if (RedisController.isFirstRun) {
-            pub.set('state', JSON.stringify(beginState));
+            pub.set(STATE_CHANNEL, JSON.stringify(beginState));
             this.isFirstRun = false;
         }
 
-        await sub.subscribe('state');
+        await sub.subscribe(STATE_CHANNEL, STATE_PROPOSITION_CHANNEL);
 
         return new RedisController(pub, sub);
     }
@@ -32,19 +35,19 @@ export class RedisController {
     public rewriteState(data: Partial<StateType>) {
         const _pub = this.pub;
         let updateState = '';
-        _pub.get('state').then((state) => {
+        _pub.get(STATE_CHANNEL).then((state) => {
             updateState = JSON.stringify({ ...JSON.parse(state!), ...data });
-            _pub.set('state', updateState);
+            _pub.set(STATE_CHANNEL, updateState);
         }).then(() => {
-            _pub.publish('state', updateState);
+            _pub.publish(STATE_CHANNEL, updateState);
         });
     }
 
-    public on(data: Partial<StateType>, cb: (state: StateType, redisController: RedisController) => void) {
+    public onState(data: Partial<StateType>, cb: (state: StateType, rC: RedisController) => void) {
         const entries = Object.entries(data);
 
         this.sub.on('message', (channel, _data) => {
-            if (channel !== 'state') return;
+            if (channel !== STATE_CHANNEL) return;
 
             const dataAsObj = JSON.parse(_data);
 
@@ -52,5 +55,38 @@ export class RedisController {
 
             cb(dataAsObj, this);
         });
+    }
+
+    public onStateProposition(
+        data: Partial<StateType>,
+        cb: (state: StateType, rC: RedisController) => void,
+        ifStateLike?: Partial<StateType>,
+    ) {
+        const entries = Object.entries(data);
+        const { sub, pub } = this;
+
+        sub.on('message', async (channel, _data) => {
+            if (channel !== STATE_PROPOSITION_CHANNEL) return;
+
+            const dataAsObj = JSON.parse(_data);
+
+            if (entries.some(([k, v]) => dataAsObj[k] !== v)) return;
+
+            if (!ifStateLike) {
+                cb(dataAsObj, this);
+
+                return;
+            }
+
+            const currentState = JSON.parse((await pub.get('state'))!);
+
+            if (Object.entries(ifStateLike).some(([k, v]) => currentState[k] !== v)) return;
+
+            cb(dataAsObj, this);
+        });
+    }
+
+    public makeStateProposition(data: Partial<StateType>) {
+        this.pub.publish(STATE_PROPOSITION_CHANNEL, JSON.stringify(data));
     }
 }
