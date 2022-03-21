@@ -15,7 +15,13 @@ export async function wsInitialization() {
 
         ws.on('open', () => {
             console.info('ws.on("open")');
+
+            const stopPingPong = setInterval(() => {
+                ws.send(JSON.stringify({ id, type: 'ping' }));
+            }, 30000);
+
             rC.setOnRedisOff(() => {
+                clearInterval(stopPingPong);
                 ws.close();
                 console.info('ws.close()');
 
@@ -24,10 +30,11 @@ export async function wsInitialization() {
             rC.rewriteState({ ws: 'open' });
 
             rC.onStateProposition({ ws: 'close' }, (_state, _rC) => {
+                clearInterval(stopPingPong);
                 ws.close();
                 console.info('ws.close()');
                 _rC.rewriteState({ ws: 'close' });
-            });
+            }, { ws: 'open' });
         });
     }, { ws: 'close' });
 }
