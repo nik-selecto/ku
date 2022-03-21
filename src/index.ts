@@ -1,16 +1,17 @@
 import { RedisController } from './redis-controller';
-import { wsInitialization } from './ws-initialization';
+import { pause } from './utils/pause';
+import { wsInitialization } from './ws/ws-initialization';
 
 async function main() {
     const rC = await RedisController.init();
 
     await wsInitialization();
 
-    rC.onState({ ws: 'open' }, (state, _rC) => {
-        _rC.makeStateProposition({ redis: 'off' });
-    });
-
     rC.makeStateProposition({ ws: 'open' });
+
+    await pause(4);
+
+    rC.makeStateProposition({ redis: 'off' });
 }
 
 main().catch((error) => {

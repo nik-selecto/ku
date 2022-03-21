@@ -1,8 +1,9 @@
 import qs from 'qs';
 import { v4 } from 'uuid';
 import Ws from 'ws';
-import { KuRequest } from './api/index.api';
-import { RedisController } from './redis-controller';
+import { KuRequest } from '../api/index.api';
+import { RedisController } from '../redis-controller';
+import { IWsMessage } from './ws-types';
 
 export async function wsInitialization() {
     const redisController = await RedisController.init();
@@ -12,6 +13,14 @@ export async function wsInitialization() {
         const [server] = instanceServers;
         const id = v4();
         const ws = new Ws(`${server.endpoint}${qs.stringify({ token, id }, { addQueryPrefix: true })}`);
+
+        ws.on('message', (message: string) => {
+            const jMessage = JSON.parse(message) as IWsMessage;
+
+            if (jMessage.type !== 'message') return;
+
+            console.log(jMessage);
+        });
 
         ws.on('open', () => {
             console.info('ws.on("open")');
@@ -27,6 +36,7 @@ export async function wsInitialization() {
 
                 return rC.rewriteState({ ws: 'close' });
             });
+
             rC.rewriteState({ ws: 'open' });
 
             rC.onStateProposition({ ws: 'close' }, (_state, _rC) => {

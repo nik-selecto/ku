@@ -15,6 +15,11 @@ const beginState: StateType = {
 const STATE_CHANNEL = 'state' as const;
 const STATE_PROPOSITION_CHANNEL = 'ask-state' as const;
 
+// eslint-disable-next-line no-shadow
+export enum ChannelEnum {
+    WS_MESSAGE = 'ws-message',
+}
+
 export class RedisController {
     private static isFirstRun = true;
 
@@ -22,7 +27,7 @@ export class RedisController {
 
     private constructor(private pub: RedisType, private sub: RedisType) { }
 
-    public static async init() {
+    public static async init(...channels: ChannelEnum[]) {
         const pub = new Redis();
         const sub = pub.duplicate();
         const redisController = new RedisController(pub, sub);
@@ -32,7 +37,7 @@ export class RedisController {
             this.isFirstRun = false;
         }
 
-        await sub.subscribe(STATE_CHANNEL, STATE_PROPOSITION_CHANNEL);
+        await sub.subscribe(STATE_CHANNEL, STATE_PROPOSITION_CHANNEL, ...channels);
 
         sub.on('message', (channel, data) => {
             if (channel !== STATE_PROPOSITION_CHANNEL) return;
