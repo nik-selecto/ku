@@ -18,8 +18,16 @@ export async function wsInitialization() {
             rC.setOnRedisOff(() => {
                 ws.close();
                 console.info('ws.close()');
+
+                return rC.rewriteState({ ws: 'close' });
             });
             rC.rewriteState({ ws: 'open' });
+
+            rC.onStateProposition({ ws: 'close' }, (_state, _rC) => {
+                ws.close();
+                console.info('ws.close()');
+                _rC.rewriteState({ ws: 'close' });
+            });
         });
     }, { ws: 'close' });
 }

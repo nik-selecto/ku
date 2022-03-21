@@ -41,12 +41,31 @@ export class RedisController {
 
             if (stateProposition.redis !== 'off') return;
 
-            redisController.onRedisOff?.();
+            if (!redisController.onRedisOff) {
+                pub.disconnect();
+                sub.disconnect();
+                console.info('Disconnect from Redis');
+
+                return;
+            }
+
+            const offResult = redisController.onRedisOff();
+
+            if (offResult instanceof Promise) {
+                offResult.then(() => {
+                    pub.disconnect();
+                    sub.disconnect();
+                    console.info('Disconnect from Redis');
+                });
+
+                return;
+            }
+
             pub.disconnect();
             sub.disconnect();
-
             console.info('Disconnect from Redis');
         });
+
         console.info('Connect to Redis');
 
         return redisController;
@@ -60,12 +79,12 @@ export class RedisController {
         const _pub = this.pub;
         let updateState = '';
 
-        _pub.get(STATE_CHANNEL).then((state) => {
+        return _pub.get(STATE_CHANNEL).then((state) => {
             updateState = JSON.stringify({ ...JSON.parse(state!), ...data });
             _pub.set(STATE_CHANNEL, updateState);
         }).then(() => {
             _pub.publish(STATE_CHANNEL, updateState);
-        });
+        }) as Promise<void>;
     }
 
     public onState(data: Partial<StateType>, cb: (state: StateType, rC: RedisController) => void) {
