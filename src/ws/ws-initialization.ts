@@ -19,7 +19,7 @@ export async function wsInitialization() {
 
             if (jMessage.type !== 'message') return;
 
-            console.log(jMessage);
+            redisController.publish(jMessage.subject!, jMessage);
         });
 
         ws.on('open', () => {

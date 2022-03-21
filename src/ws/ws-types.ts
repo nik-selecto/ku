@@ -1,9 +1,5 @@
 type WsMessageTypeType = 'message' | 'ack' | 'welcome' | 'error';
 
-export interface IWsMessage {
-    type: WsMessageTypeType,
-}
-
 // eslint-disable-next-line no-shadow
 export enum WsSubjectEnum {
     TRADE_TICKER = 'trade.ticker',
@@ -22,6 +18,12 @@ export enum WsSubjectEnum {
     ORDER_UPDATE = 'order.update',
     ORDER_DONE = 'order.done',
     STOP_ORDER = 'stopOrder',
+}
+
+export interface IWsMessage {
+    type: WsMessageTypeType,
+    subject?: WsSubjectEnum,
+    topic?: string, // TODO
 }
 
 export type TradeTickerMessageType = {

@@ -1,5 +1,6 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import { v4 } from 'uuid';
+import { WsSubjectEnum } from './ws/ws-types';
 
 type RedisValueType = 'on' | 'off';
 type WsValueType = 'open' | 'close';
@@ -18,11 +19,6 @@ const STATE_CHANNEL = 'state' as const;
 const STATE_PROPOSITION_CHANNEL = 'ask-state' as const;
 const RM_LISTENER_CHANNLE = 'rm-listener' as const;
 
-// eslint-disable-next-line no-shadow
-export enum ChannelEnum {
-    TRADE_TICKER_ws_message = 'trade-ticker-ws-message',
-}
-
 export class RedisController {
     private static isFirstRun = true;
 
@@ -32,7 +28,7 @@ export class RedisController {
 
     private constructor(private pub: RedisType, private sub: RedisType) { }
 
-    public static async init(...channels: ChannelEnum[]) {
+    public static async init(...channels: WsSubjectEnum[]) {
         const pub = new Redis();
         const sub = pub.duplicate();
         const redisController = new RedisController(pub, sub);
@@ -156,12 +152,12 @@ export class RedisController {
         this.pub.publish(STATE_PROPOSITION_CHANNEL, JSON.stringify(data));
     }
 
-    public publish<T extends {}>(channel: ChannelEnum, data: T) {
+    public publish<T extends {}>(channel: WsSubjectEnum, data: T) {
         this.pub.publish(channel, JSON.stringify(data));
     }
 
-    public on<T>(channel: ChannelEnum, cb: (data: T) => void) {
-        const onMessageCb = (_channel: ChannelEnum, _data: string) => {
+    public on<T>(channel: WsSubjectEnum, cb: (data: T) => void) {
+        const onMessageCb = (_channel: WsSubjectEnum, _data: string) => {
             if (_channel !== channel) return;
 
             cb(JSON.parse(_data));
