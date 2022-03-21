@@ -1,4 +1,5 @@
 import Redis, { Redis as RedisType } from 'ioredis';
+import { v4 } from 'uuid';
 
 type RedisValueType = 'on' | 'off';
 type WsValueType = 'open' | 'close';
@@ -6,6 +7,7 @@ type StateType = {
     ws: WsValueType,
     redis: RedisValueType,
 }
+type OffCallbackType = (...args: any[]) => void;
 
 const beginState: StateType = {
     redis: 'on',
@@ -14,14 +16,17 @@ const beginState: StateType = {
 
 const STATE_CHANNEL = 'state' as const;
 const STATE_PROPOSITION_CHANNEL = 'ask-state' as const;
+const RM_LISTENER_CHANNLE = 'rm-listener' as const;
 
 // eslint-disable-next-line no-shadow
 export enum ChannelEnum {
-    WS_MESSAGE = 'ws-message',
+    TRADE_TICKER_ws_message = 'trade-ticker-ws-message',
 }
 
 export class RedisController {
     private static isFirstRun = true;
+
+    private callbacksMap!: Map<string, { channel: string, cb: OffCallbackType }>;
 
     private onRedisOff?: () => Promise<void> | void;
 
@@ -32,15 +37,27 @@ export class RedisController {
         const sub = pub.duplicate();
         const redisController = new RedisController(pub, sub);
 
+        redisController.callbacksMap = new Map();
+
         if (RedisController.isFirstRun) {
             pub.set(STATE_CHANNEL, JSON.stringify(beginState));
             this.isFirstRun = false;
         }
 
-        await sub.subscribe(STATE_CHANNEL, STATE_PROPOSITION_CHANNEL, ...channels);
+        await sub.subscribe(STATE_CHANNEL, STATE_PROPOSITION_CHANNEL, RM_LISTENER_CHANNLE, ...channels);
 
         sub.on('message', (channel, data) => {
-            if (channel !== STATE_PROPOSITION_CHANNEL) return;
+            if (channel !== STATE_PROPOSITION_CHANNEL) {
+                if (channel !== RM_LISTENER_CHANNLE) return;
+
+                const myCb = redisController.callbacksMap.get(data);
+
+                if (!myCb) return;
+
+                sub.removeListener(myCb.channel, myCb.cb);
+
+                return;
+            }
 
             const stateProposition = JSON.parse(data) as Partial<StateType>;
 
@@ -137,5 +154,34 @@ export class RedisController {
 
     public makeStateProposition(data: Partial<StateType>) {
         this.pub.publish(STATE_PROPOSITION_CHANNEL, JSON.stringify(data));
+    }
+
+    public publish<T extends {}>(channel: ChannelEnum, data: T) {
+        this.pub.publish(channel, JSON.stringify(data));
+    }
+
+    public on<T>(channel: ChannelEnum, cb: (data: T) => void) {
+        const onMessageCb = (_channel: ChannelEnum, _data: string) => {
+            if (_channel !== channel) return;
+
+            cb(JSON.parse(_data));
+        };
+        const cbId = v4();
+
+        this.sub.on('message', onMessageCb);
+        this.callbacksMap.set(cbId, { channel, cb: onMessageCb });
+
+        return cbId;
+    }
+
+    public removeListener(cbId: string) {
+        const myCb = this.callbacksMap.get(cbId);
+
+        if (myCb) {
+            this.sub.removeListener(myCb.channel, myCb.cb);
+            this.callbacksMap.delete(cbId);
+        } else {
+            this.pub.publish(RM_LISTENER_CHANNLE, cbId);
+        }
     }
 }
