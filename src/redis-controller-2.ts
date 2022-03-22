@@ -92,4 +92,8 @@ export class RedisController2 {
 
         return fullCallback;
     }
+
+    public message<Channel extends string, MessageType extends {}>(channel: Channel, message: MessageType): void {
+        this.pub.publish(channel, JSON.stringify(message));
+    }
 }
