@@ -1,4 +1,4 @@
-import { Redis as RedisType } from 'ioredis';
+import Redis, { Redis as RedisType } from 'ioredis';
 
 // eslint-disable-next-line no-use-before-define
 type OnStateCbType<TState> = (state: TState, rC: RedisController2) => void;
@@ -13,6 +13,10 @@ const STR_EMPTY_OBJ = '{}' as const;
 function defaultAssertionCb<TState>(actual: TState, expected: Partial<TState>) {
     return !(Object.entries(expected) as [keyof TState, any][]).some(([k, v]) => actual[k] !== v);
 }
+
+const DEFAULT_CHANNELS = [
+
+] as const;
 
 export class RedisController2 {
     private constructor(private pub: RedisType, private sub: RedisType) { }
@@ -119,5 +123,19 @@ export class RedisController2 {
             channel,
             offCb: fullCallback,
         };
+    }
+
+    public static async init(...channels: string[]): Promise<RedisController2> {
+        const pub = new Redis();
+        const sub = pub.duplicate();
+        const redisController = new RedisController2(pub, sub);
+
+        redisController.listenersStorage = new Map();
+
+        await sub.subscribe(...DEFAULT_CHANNELS, ...channels);
+
+        console.info('Connect to Redis');
+
+        return redisController;
     }
 }
