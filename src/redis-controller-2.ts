@@ -17,7 +17,7 @@ function defaultAssertionCb<TState>(actual: TState, expected: Partial<TState>) {
 export class RedisController2 {
     private constructor(private pub: RedisType, private sub: RedisType) { }
 
-    private cbStorage!: Map<string, OffCbType>;
+    private listenersStorage!: Map<string, OffCbType>;
 
     public patchState<TStateName extends string, TState extends {}>(name: TStateName, changes: Partial<TState>): void {
         const { pub } = this;
@@ -47,7 +47,7 @@ export class RedisController2 {
         };
 
         this.sub.on(MESSAGE, fullCallback);
-        this.cbStorage.set(fullCallback.toString(), fullCallback);
+        this.listenersStorage.set(fullCallback.toString(), fullCallback);
 
         return {
             offCb: fullCallback,
@@ -92,7 +92,7 @@ export class RedisController2 {
         };
 
         sub.on(MESSAGE, fullCallback);
-        this.cbStorage.set(fullCallback.toString(), fullCallback);
+        this.listenersStorage.set(fullCallback.toString(), fullCallback);
 
         return {
             channel: name,
@@ -113,7 +113,7 @@ export class RedisController2 {
         };
 
         this.sub.on(MESSAGE, fullCallback);
-        this.cbStorage.set(fullCallback.toString(), fullCallback);
+        this.listenersStorage.set(fullCallback.toString(), fullCallback);
 
         return {
             channel,
