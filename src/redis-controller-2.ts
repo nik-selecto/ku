@@ -23,7 +23,7 @@ export class RedisController2 {
             }).then((updatedState) => pub.publish(name, updatedState)) as Promise<void>;
     }
 
-    public onState<StateName extends string, StateType extends {}>(
+    public onStatePatched<StateName extends string, StateType extends {}>(
         name: StateName,
         expectedState: Partial<StateType>,
         cb: OnStateCbType<StateType>,
@@ -50,5 +50,9 @@ export class RedisController2 {
         this.cbStorage.set(fullCallback.toString(), fullCallback);
 
         return fullCallback as OffCbType;
+    }
+
+    public proposeState<StateName extends string, StateType>(name: StateName, proposition: Partial<StateType>) {
+        this.pub.publish(name, JSON.stringify(proposition));
     }
 }
