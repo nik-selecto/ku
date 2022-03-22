@@ -27,14 +27,21 @@ export class RedisController2 {
         name: StateName,
         expectedState: Partial<StateType>,
         cb: OnStateCbType<StateType>,
+        isNotExpectedAssertion: ((
+            expected: Partial<StateType>,
+            actual: StateType) => boolean
+        ) = (
+            expected,
+            actual,
+            ) => (Object.entries(expected) as [keyof StateType, any][])
+                .some(([k, v]) => actual[k] !== v),
     ): OffCbType {
-        const entries = Object.entries(expectedState) as [keyof StateType, any][];
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
 
             const jData = JSON.parse(data) as StateType;
 
-            if (entries.some(([k, v]) => jData[k] !== v)) return;
+            if (isNotExpectedAssertion(expectedState, jData)) return;
 
             cb(jData, this);
         };
