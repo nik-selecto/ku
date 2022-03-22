@@ -1,16 +1,17 @@
 import { Redis as RedisType } from 'ioredis';
 
 // eslint-disable-next-line no-use-before-define
-type OnStateCbType<StateType> = (state: StateType, rC: RedisController2) => void;
+type OnStateCbType<TState> = (state: TState, rC: RedisController2) => void;
 type OffCbType = (...args: any[]) => void;
-type AssertionCbType<StateType> = (actual: StateType, expected: Partial<StateType>) => boolean;
+type RmListenerType = { offCb: OffCbType, channel: string };
+type AssertionCbType<TState> = (actual: TState, expected: Partial<TState>) => boolean;
 
 const MESSAGE = 'message' as const;
 const PROPOSITION_POSTFIX = '-proposition' as const;
 const STR_EMPTY_OBJ = '{}' as const;
 
-function defaultAssertionCb<StateType>(actual: StateType, expected: Partial<StateType>) {
-    return !(Object.entries(expected) as [keyof StateType, any][]).some(([k, v]) => actual[k] !== v);
+function defaultAssertionCb<TState>(actual: TState, expected: Partial<TState>) {
+    return !(Object.entries(expected) as [keyof TState, any][]).some(([k, v]) => actual[k] !== v);
 }
 
 export class RedisController2 {
@@ -18,7 +19,7 @@ export class RedisController2 {
 
     private cbStorage!: Map<string, OffCbType>;
 
-    public patchState<StateName extends string, StateType extends {}>(name: StateName, changes: Partial<StateType>): void {
+    public patchState<TStateName extends string, TState extends {}>(name: TStateName, changes: Partial<TState>): void {
         const { pub } = this;
 
         pub.get(name)
@@ -31,16 +32,16 @@ export class RedisController2 {
             .then((updatedState) => pub.publish(name, updatedState));
     }
 
-    public onStatePatched<StateName extends string, StateType extends {}>(
-        name: StateName,
-        expectedState: Partial<StateType>,
-        cb: OnStateCbType<StateType>,
-        isExpectedState: AssertionCbType<StateType> = defaultAssertionCb,
-    ): OffCbType {
+    public onStatePatched<TStateName extends string, TState extends {}>(
+        name: TStateName,
+        expectedState: Partial<TState>,
+        cb: OnStateCbType<TState>,
+        isExpectedState: AssertionCbType<TState> = defaultAssertionCb,
+    ): RmListenerType {
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
 
-            const jData = JSON.parse(data) as StateType;
+            const jData = JSON.parse(data) as TState;
 
             if (isExpectedState(jData, expectedState)) cb(jData, this);
         };
@@ -48,23 +49,26 @@ export class RedisController2 {
         this.sub.on(MESSAGE, fullCallback);
         this.cbStorage.set(fullCallback.toString(), fullCallback);
 
-        return fullCallback as OffCbType;
+        return {
+            offCb: fullCallback,
+            channel: name,
+        };
     }
 
-    public proposeState<StateName extends string, StateType extends {}>(name: StateName, proposition: Partial<StateType>): void {
+    public proposeState<TStateName extends string, TState extends {}>(name: TStateName, proposition: Partial<TState>): void {
         this.pub.publish(`${name}${PROPOSITION_POSTFIX}`, JSON.stringify(proposition));
     }
 
-    public onStateProposition<StateName extends string, StateType extends {}>(
-        name: StateName,
-        expectedProposition: Partial<StateType>,
-        cb: OnStateCbType<StateType>,
+    public onStateProposition<TStateName extends string, TState extends {}>(
+        name: TStateName,
+        expectedProposition: Partial<TState>,
+        cb: OnStateCbType<TState>,
         options: {
-            onlyIfStateLike?: Partial<StateType>,
-            isExpectedProposition?: AssertionCbType<StateType>,
-            isExpectedState?: AssertionCbType<StateType>
+            onlyIfStateLike?: Partial<TState>,
+            isExpectedProposition?: AssertionCbType<TState>,
+            isExpectedState?: AssertionCbType<TState>
         },
-    ): OffCbType {
+    ): RmListenerType {
         const rC = this;
         const { pub, sub } = this;
         const {
@@ -75,7 +79,7 @@ export class RedisController2 {
         const fullCallback = (channel: string, proposition: string) => {
             if (channel !== `${name}${PROPOSITION_POSTFIX}`) return;
 
-            if (!isExpectedProposition((JSON.parse(proposition) as StateType), expectedProposition)) return;
+            if (!isExpectedProposition((JSON.parse(proposition) as TState), expectedProposition)) return;
 
             pub.get(name)
                 .then((state) => {
@@ -90,10 +94,30 @@ export class RedisController2 {
         sub.on(MESSAGE, fullCallback);
         this.cbStorage.set(fullCallback.toString(), fullCallback);
 
-        return fullCallback;
+        return {
+            channel: name,
+            offCb: fullCallback,
+        };
     }
 
-    public message<Channel extends string, MessageType extends {}>(channel: Channel, message: MessageType): void {
+    public message<TChannel extends string, TMessage extends {}>(channel: TChannel, message: TMessage): void {
         this.pub.publish(channel, JSON.stringify(message));
+    }
+
+    public onMessage<TChannel extends string, TMessage extends {}>(channel: TChannel, cb: OnStateCbType<TMessage>): RmListenerType {
+        const rC = this;
+        const fullCallback = (_channel: string, data: string) => {
+            if (channel !== _channel) return;
+
+            cb(JSON.parse(data), rC);
+        };
+
+        this.sub.on(MESSAGE, fullCallback);
+        this.cbStorage.set(fullCallback.toString(), fullCallback);
+
+        return {
+            channel,
+            offCb: fullCallback,
+        };
     }
 }
