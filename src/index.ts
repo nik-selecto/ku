@@ -1,5 +1,4 @@
 import { Ku } from './ku';
-import { pause } from './utils/pause';
 import { WsChannelDataType, wsInitialization } from './ws/ws-initialization';
 
 async function main() {
@@ -8,7 +7,6 @@ async function main() {
     await wsInitialization();
 
     rC.proposeState<WsChannelDataType>('ws', { ws: 'open' });
-    await pause(3);
     rC.disconnect();
 }
 

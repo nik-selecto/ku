@@ -51,6 +51,7 @@ export class Ku {
                         this.pub.del(REDIS_CONTROLLER_ALREADY_INIT).then(() => {
                             this.pub.disconnect();
                             this.sub.disconnect();
+                            this.isDown = true;
 
                             console.info('Disconnect from Redis');
                         });
@@ -75,11 +76,14 @@ export class Ku {
 
     private onRedisDown?: () => Promise<void> | void;
 
-    public setOnRedisDown(cb: () => Promise<void> | void) {
-        this.onRedisDown = cb;
+    public setOnRedisDown(cb: (pub: RedisType, sub: RedisType) => Promise<void> | void) {
+        const { pub, sub } = this;
+        this.onRedisDown = cb.bind(this, pub, sub);
     }
 
     public patchState<T extends ChannelDataType<string, {}>>(name: T[0], changes: Partial<T[1]>): void {
+        if (this.isDown) return;
+
         const { pub } = this;
 
         pub.get(name)
@@ -116,6 +120,8 @@ export class Ku {
     }
 
     public proposeState<T extends ChannelDataType<string, {}>>(name: T[0], proposition: Partial<T[1]>): void {
+        if (this.isDown) return;
+
         this.pub.publish(`${name}${PROPOSITION_POSTFIX}`, JSON.stringify(proposition));
     }
 
@@ -161,6 +167,8 @@ export class Ku {
     }
 
     public message<T extends ChannelDataType<string, {}>>(channel: T[0], message: T[1]): void {
+        if (this.isDown) return;
+
         this.pub.publish(channel, JSON.stringify(message));
     }
 
@@ -210,6 +218,7 @@ export class Ku {
         if (all) {
             this.pub.publish(('redis-down' as DefaultChannelsType), STR_EMPTY_OBJ);
         } else {
+            this.isDown = true;
             this.pub.disconnect();
             this.sub.disconnect();
         }
