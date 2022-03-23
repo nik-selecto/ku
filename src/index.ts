@@ -1,4 +1,4 @@
-import { RedisController2 } from './redis-controller-2';
+import { RedisController2 } from './ku';
 import { pause } from './utils/pause';
 import { WsChannelDataType, wsInitialization } from './ws/ws-initialization';
 

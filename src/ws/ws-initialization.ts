@@ -2,7 +2,7 @@ import qs from 'qs';
 import { v4 } from 'uuid';
 import Ws from 'ws';
 import { KuRequest } from '../api/index.api';
-import { ChannelDataType, RedisController2 } from '../redis-controller-2';
+import { ChannelDataType, RedisController2 } from '../ku';
 import { IWsMessage } from './ws-types';
 
 export type WsChannelDataType = ChannelDataType<'ws', {
