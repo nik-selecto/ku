@@ -2,7 +2,7 @@ import qs from 'qs';
 import { v4 } from 'uuid';
 import Ws from 'ws';
 import { KuRequest } from '../api/index.api';
-import { ChannelDataType, RedisController2 } from '../ku';
+import { ChannelDataType, Ku } from '../ku';
 import { IWsMessage } from './ws-types';
 
 export type WsChannelDataType = ChannelDataType<'ws', {
@@ -10,7 +10,7 @@ export type WsChannelDataType = ChannelDataType<'ws', {
 }>;
 
 export async function wsInitialization() {
-    const redisController = await RedisController2.init('ws');
+    const redisController = await Ku.init('ws');
 
     redisController.onStateProposition<WsChannelDataType>('ws', { ws: 'open' }, async (state, rC) => {
         const { instanceServers, token } = (await KuRequest.POST['/api/v1/bullet-private'].exec())!;

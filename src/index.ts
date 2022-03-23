@@ -1,9 +1,9 @@
-import { RedisController2 } from './ku';
+import { Ku } from './ku';
 import { pause } from './utils/pause';
 import { WsChannelDataType, wsInitialization } from './ws/ws-initialization';
 
 async function main() {
-    const rC = await RedisController2.init();
+    const rC = await Ku.init();
 
     await wsInitialization();
 
@@ -17,5 +17,5 @@ main().catch((error) => {
     console.error(error);
     console.error('================== ERROR =================');
 }).finally(() => {
-    RedisController2.finally();
+    Ku.finally();
 });

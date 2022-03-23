@@ -1,7 +1,7 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 
 // eslint-disable-next-line no-use-before-define
-type OnStateCbType<TState> = (state: TState, rC: RedisController2) => void;
+type OnStateCbType<TState> = (state: TState, rC: Ku) => void;
 type OffCbType = (...args: any[]) => void;
 type RmListenerType = { offCb: OffCbType, channel: string };
 type AssertionCbType<TState> = (actual: TState, expected: Partial<TState>) => boolean;
@@ -30,7 +30,7 @@ const DEFAULT_BEGIN_STATES_ACC: Record<string, Record<string, any>> = {
 
 export type ChannelDataType<TChannel extends string, TData extends {}> = [TChannel, TData];
 
-export class RedisController2 {
+export class Ku {
     private isDown = false;
 
     private constructor(private pub: RedisType, private sub: RedisType) {
@@ -181,10 +181,10 @@ export class RedisController2 {
         };
     }
 
-    public static async init(...channels: string[]): Promise<RedisController2> {
+    public static async init(...channels: string[]): Promise<Ku> {
         const pub = new Redis();
         const sub = pub.duplicate();
-        const redisController = new RedisController2(pub, sub);
+        const redisController = new Ku(pub, sub);
         const isFirstInit = await pub.get(REDIS_CONTROLLER_ALREADY_INIT);
         const allChannels = [...DEFAULT_CHANNELS, ...channels].reduce((acc, channel) => {
             acc.push(channel, `${channel}${PROPOSITION_POSTFIX}`);
