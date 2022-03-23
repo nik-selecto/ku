@@ -35,10 +35,12 @@ export class RedisController2 {
                 },
                 'redis-down': () => {
                     const disconnect = () => {
-                        this.pub.disconnect();
-                        this.sub.disconnect();
+                        this.pub.del(REDIS_CONTROLLER_ALREADY_INIT).then(() => {
+                            this.pub.disconnect();
+                            this.sub.disconnect();
 
-                        console.info('Disconnect from Redis');
+                            console.info('Disconnect from Redis');
+                        });
                     };
 
                     if (!this.onRedisDown) {
