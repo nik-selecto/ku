@@ -2,13 +2,17 @@ import qs from 'qs';
 import { v4 } from 'uuid';
 import Ws from 'ws';
 import { KuRequest } from '../api/index.api';
-import { RedisController } from '../redis-controller';
+import { ChannelDataType, RedisController2 } from '../redis-controller-2';
 import { IWsMessage } from './ws-types';
 
-export async function wsInitialization() {
-    const redisController = await RedisController.init();
+export type WsChannelDataType = ChannelDataType<'ws', {
+    ws: 'open' | 'close',
+}>;
 
-    redisController.onStateProposition({ ws: 'open' }, async (state, rC) => {
+export async function wsInitialization() {
+    const redisController = await RedisController2.init('ws');
+
+    redisController.onStateProposition<WsChannelDataType>('ws', { ws: 'open' }, async (state, rC) => {
         const { instanceServers, token } = (await KuRequest.POST['/api/v1/bullet-private'].exec())!;
         const [server] = instanceServers;
         const id = v4();
@@ -19,7 +23,7 @@ export async function wsInitialization() {
 
             if (jMessage.type !== 'message') return;
 
-            redisController.publish(jMessage.subject!, jMessage);
+            redisController.message(jMessage.subject!, jMessage);
         });
 
         ws.on('open', () => {
@@ -29,22 +33,24 @@ export async function wsInitialization() {
                 ws.send(JSON.stringify({ id, type: 'ping' }));
             }, 30000);
 
-            rC.setOnRedisOff(() => {
+            rC.setOnRedisDown(() => {
                 clearInterval(stopPingPong);
                 ws.close();
                 console.info('ws.close()');
-
-                return rC.rewriteState({ ws: 'close' });
             });
 
-            rC.rewriteState({ ws: 'open' });
+            rC.patchState<WsChannelDataType>('ws', { ws: 'open' });
 
-            rC.onStateProposition({ ws: 'close' }, (_state, _rC) => {
-                clearInterval(stopPingPong);
-                ws.close();
-                console.info('ws.close()');
-                _rC.rewriteState({ ws: 'close' });
-            }, { ws: 'open' });
+            rC.onStateProposition<WsChannelDataType>(
+                'ws',
+                { ws: 'close' },
+                () => {
+                    clearInterval(stopPingPong);
+                    ws.close();
+                    console.info('ws.close()');
+                },
+                { onlyIfStateLike: { ws: 'open' } },
+            );
         });
-    }, { ws: 'close' });
+    }, { onlyIfStateLike: { ws: 'close' } });
 }

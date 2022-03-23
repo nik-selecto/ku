@@ -1,21 +1,21 @@
-import { RedisController } from './redis-controller';
+import { RedisController2 } from './redis-controller-2';
 import { pause } from './utils/pause';
-import { wsInitialization } from './ws/ws-initialization';
+import { WsChannelDataType, wsInitialization } from './ws/ws-initialization';
 
 async function main() {
-    const rC = await RedisController.init();
+    const rC = await RedisController2.init();
 
     await wsInitialization();
 
-    rC.makeStateProposition({ ws: 'open' });
-
-    await pause(4);
-
-    rC.makeStateProposition({ redis: 'off' });
+    rC.proposeState<WsChannelDataType>('ws', { ws: 'open' });
+    await pause(3);
+    rC.disconnect();
 }
 
 main().catch((error) => {
     console.error('================== ERROR =================');
     console.error(error);
     console.error('================== ERROR =================');
+}).finally(() => {
+    RedisController2.finally();
 });

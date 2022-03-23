@@ -21,10 +21,23 @@ const DEFAULT_CHANNELS: DefaultChannelsType[] = [
     'redis-down',
 ];
 
+const DEFAULT_BEGIN_STATES_ACC: Record<string, Record<string, any>> = {
+    ws: {
+        ws: 'close',
+        subscriptions: [],
+    },
+};
+
+export type ChannelDataType<TChannel extends string, TData extends {}> = [TChannel, TData];
+
 export class RedisController2 {
+    private isDown = false;
+
     private constructor(private pub: RedisType, private sub: RedisType) {
         sub.on(MESSAGE, (channel: DefaultChannelsType, data: string) => {
-            ({
+            if (this.isDown) return;
+
+            const resolver: Record<DefaultChannelsType, (() => void) | undefined> = {
                 'rm-listener': () => {
                     const jData = JSON.parse(data) as Record<keyof RmListenerType, string>;
                     const myCb = this.listenersStorage.get(jData.offCb);
@@ -52,7 +65,9 @@ export class RedisController2 {
                         disconnect();
                     }
                 },
-            })[channel]();
+            };
+
+            resolver[channel]?.();
         });
     }
 
@@ -60,7 +75,11 @@ export class RedisController2 {
 
     private onRedisDown?: () => Promise<void> | void;
 
-    public patchState<TStateName extends string, TState extends {}>(name: TStateName, changes: Partial<TState>): void {
+    public setOnRedisDown(cb: () => Promise<void> | void) {
+        this.onRedisDown = cb;
+    }
+
+    public patchState<T extends ChannelDataType<string, {}>>(name: T[0], changes: Partial<T[1]>): void {
         const { pub } = this;
 
         pub.get(name)
@@ -73,16 +92,16 @@ export class RedisController2 {
             .then((updatedState) => pub.publish(name, updatedState));
     }
 
-    public onStatePatched<TStateName extends string, TState extends {}>(
-        name: TStateName,
-        expectedState: Partial<TState>,
-        cb: OnStateCbType<TState>,
-        isExpectedState: AssertionCbType<TState> = defaultAssertionCb,
+    public onStatePatched<T extends ChannelDataType<string, {}>>(
+        name: T[0],
+        expectedState: Partial<T[1]>,
+        cb: OnStateCbType<T[1]>,
+        isExpectedState: AssertionCbType<T[1]> = defaultAssertionCb,
     ): RmListenerType {
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
 
-            const jData = JSON.parse(data) as TState;
+            const jData = JSON.parse(data) as T[1];
 
             if (isExpectedState(jData, expectedState)) cb(jData, this);
         };
@@ -96,18 +115,18 @@ export class RedisController2 {
         };
     }
 
-    public proposeState<TStateName extends string, TState extends {}>(name: TStateName, proposition: Partial<TState>): void {
+    public proposeState<T extends ChannelDataType<string, {}>>(name: T[0], proposition: Partial<T[1]>): void {
         this.pub.publish(`${name}${PROPOSITION_POSTFIX}`, JSON.stringify(proposition));
     }
 
-    public onStateProposition<TStateName extends string, TState extends {}>(
-        name: TStateName,
-        expectedProposition: Partial<TState>,
-        cb: OnStateCbType<TState>,
+    public onStateProposition<T extends ChannelDataType<string, {}>>(
+        name: T[0],
+        expectedProposition: Partial<T[1]>,
+        cb: OnStateCbType<T[1]>,
         options: {
-            onlyIfStateLike?: Partial<TState>,
-            isExpectedProposition?: AssertionCbType<TState>,
-            isExpectedState?: AssertionCbType<TState>
+            onlyIfStateLike?: Partial<T[1]>,
+            isExpectedProposition?: AssertionCbType<T[1]>,
+            isExpectedState?: AssertionCbType<T[1]>
         },
     ): RmListenerType {
         const rC = this;
@@ -120,7 +139,7 @@ export class RedisController2 {
         const fullCallback = (channel: string, proposition: string) => {
             if (channel !== `${name}${PROPOSITION_POSTFIX}`) return;
 
-            if (!isExpectedProposition((JSON.parse(proposition) as TState), expectedProposition)) return;
+            if (!isExpectedProposition((JSON.parse(proposition) as T[1]), expectedProposition)) return;
 
             pub.get(name)
                 .then((state) => {
@@ -141,11 +160,11 @@ export class RedisController2 {
         };
     }
 
-    public message<TChannel extends string, TMessage extends {}>(channel: TChannel, message: TMessage): void {
+    public message<T extends ChannelDataType<string, {}>>(channel: T[0], message: T[1]): void {
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<TChannel extends string, TMessage extends {}>(channel: TChannel, cb: OnStateCbType<TMessage>): RmListenerType {
+    public onMessage<T extends ChannelDataType<string, {}>>(channel: T[0], cb: OnStateCbType<T[1]>): RmListenerType {
         const rC = this;
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
@@ -162,23 +181,43 @@ export class RedisController2 {
         };
     }
 
-    public static async init<TAllStatesAcc extends {}>(beginAllStateAcc: TAllStatesAcc, ...channels: string[]): Promise<RedisController2> {
+    public static async init(...channels: string[]): Promise<RedisController2> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const redisController = new RedisController2(pub, sub);
         const isFirstInit = await pub.get(REDIS_CONTROLLER_ALREADY_INIT);
+        const allChannels = [...DEFAULT_CHANNELS, ...channels].reduce((acc, channel) => {
+            acc.push(channel, `${channel}${PROPOSITION_POSTFIX}`);
+
+            return acc;
+        }, [] as string[]);
 
         if (!isFirstInit) {
-            await Promise.all(Object.entries(beginAllStateAcc).map(([k, v]) => pub.set(k, JSON.stringify(v))));
+            await Promise.all(Object.entries((DEFAULT_BEGIN_STATES_ACC)).map(([k, v]) => pub.set(k, JSON.stringify(v))));
             await pub.set(REDIS_CONTROLLER_ALREADY_INIT, REDIS_CONTROLLER_ALREADY_INIT);
         }
 
         redisController.listenersStorage = new Map();
 
-        await sub.subscribe(...DEFAULT_CHANNELS, ...channels);
+        await sub.subscribe(...allChannels);
 
         console.info('Connect to Redis');
 
         return redisController;
+    }
+
+    public disconnect(all: boolean = true) {
+        if (all) {
+            this.pub.publish(('redis-down' as DefaultChannelsType), STR_EMPTY_OBJ);
+        } else {
+            this.pub.disconnect();
+            this.sub.disconnect();
+        }
+    }
+
+    public static finally() {
+        const redis = new Redis();
+
+        redis.del(REDIS_CONTROLLER_ALREADY_INIT).then(() => redis.disconnect());
     }
 }
