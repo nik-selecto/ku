@@ -6,6 +6,7 @@ type OffCbType = (...args: any[]) => void;
 type RmListenerType = { offCb: OffCbType, channel: string };
 type AssertionCbType<TState> = (actual: TState, expected: Partial<TState>) => boolean;
 
+const REDIS_CONTROLLER_ALREADY_INIT = 'redis-controller-is-already-init';
 const MESSAGE = 'message' as const;
 const PROPOSITION_POSTFIX = '-proposition' as const;
 const STR_EMPTY_OBJ = '{}' as const;
@@ -125,10 +126,16 @@ export class RedisController2 {
         };
     }
 
-    public static async init(...channels: string[]): Promise<RedisController2> {
+    public static async init<TAllStatesAcc extends {}>(beginAllStateAcc: TAllStatesAcc, ...channels: string[]): Promise<RedisController2> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const redisController = new RedisController2(pub, sub);
+        const isFirstInit = await pub.get(REDIS_CONTROLLER_ALREADY_INIT);
+
+        if (!isFirstInit) {
+            await Promise.all(Object.entries(beginAllStateAcc).map(([k, v]) => pub.set(k, JSON.stringify(v))));
+            await pub.set(REDIS_CONTROLLER_ALREADY_INIT, REDIS_CONTROLLER_ALREADY_INIT);
+        }
 
         redisController.listenersStorage = new Map();
 
