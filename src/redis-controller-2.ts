@@ -5,6 +5,7 @@ type OnStateCbType<TState> = (state: TState, rC: RedisController2) => void;
 type OffCbType = (...args: any[]) => void;
 type RmListenerType = { offCb: OffCbType, channel: string };
 type AssertionCbType<TState> = (actual: TState, expected: Partial<TState>) => boolean;
+type DefaultChannelsType = 'rm-listener' | 'redis-down';
 
 const REDIS_CONTROLLER_ALREADY_INIT = 'redis-controller-is-already-init';
 const MESSAGE = 'message' as const;
@@ -15,14 +16,47 @@ function defaultAssertionCb<TState>(actual: TState, expected: Partial<TState>) {
     return !(Object.entries(expected) as [keyof TState, any][]).some(([k, v]) => actual[k] !== v);
 }
 
-const DEFAULT_CHANNELS = [
-
-] as const;
+const DEFAULT_CHANNELS: DefaultChannelsType[] = [
+    'rm-listener',
+    'redis-down',
+];
 
 export class RedisController2 {
-    private constructor(private pub: RedisType, private sub: RedisType) { }
+    private constructor(private pub: RedisType, private sub: RedisType) {
+        sub.on(MESSAGE, (channel: DefaultChannelsType, data: string) => {
+            ({
+                'rm-listener': () => {
+                    const jData = JSON.parse(data) as Record<keyof RmListenerType, string>;
+                    const myCb = this.listenersStorage.get(jData.offCb);
+
+                    if (!myCb) return;
+
+                    sub.removeListener(jData.channel, myCb);
+                },
+                'redis-down': () => {
+                    const disconnect = () => {
+                        this.pub.disconnect();
+                        this.sub.disconnect();
+
+                        console.info('Disconnect from Redis');
+                    };
+
+                    if (!this.onRedisDown) {
+                        disconnect();
+                    } else if (this.onRedisDown instanceof Promise) {
+                        (this.onRedisDown() as Promise<void>).then(() => disconnect());
+                    } else {
+                        this.onRedisDown();
+                        disconnect();
+                    }
+                },
+            })[channel]();
+        });
+    }
 
     private listenersStorage!: Map<string, OffCbType>;
+
+    private onRedisDown?: () => Promise<void> | void;
 
     public patchState<TStateName extends string, TState extends {}>(name: TStateName, changes: Partial<TState>): void {
         const { pub } = this;
