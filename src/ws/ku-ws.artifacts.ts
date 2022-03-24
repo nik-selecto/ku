@@ -1,22 +1,12 @@
-import { ChannelDataType } from '../common/ku.artifacts';
-import { WsSubjectEnum } from './ws-types';
-
-type TSubscribe<T extends WsSubjectEnum, U extends {} = {}> = ChannelDataType<T, {
-    subject: T,
-} & U>;
-
-type TradeTickerMessageType = TSubscribe<WsSubjectEnum.TRADE_TICKER>;
-type TradeSnapshotMessageType = TSubscribe<WsSubjectEnum.TRADE_SNAPSHOT>;
+import { KU_ALL_STATE_TYPE } from '../common/ku-default-state';
 
 export const CONNECTING_WS_EVENT = 'ws-is-connecting';
 export const OPEN_WS_EVENT = 'ws-is-open';
 export const CLOSE_WS_EVENT = 'ws-is-close';
 
-export type WsStateType = ChannelDataType<'ws', {
-    ws: 'open' | 'close',
-}>;
+export type WsStateType = KU_ALL_STATE_TYPE[0];
 
 export type WsMessagingListType = [
-    TradeTickerMessageType,
-    TradeSnapshotMessageType,
+    KU_ALL_STATE_TYPE[1],
+    KU_ALL_STATE_TYPE[2],
 ];

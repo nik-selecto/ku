@@ -1,14 +1,14 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import { ArrayElement } from '../utils/arr-el.type';
-import { KU_DEFAULT_BEGIN_STATES_ACC } from './ku-default-state';
+import { KU_DEFAULT_BEGIN_STATES_ACC, TChannelMapper } from './ku-default-state';
 import {
     AssertionCbType, ChannelDataType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.artifacts';
 
 // eslint-disable-next-line no-use-before-define
-type OnStateCbType<TState> = (state: TState, ku: Ku<ChannelDataType<string, {}>[], ChannelDataType<string, {}>[]>) => void;
+type OnStateCbType<TState> = (state: TState, ku: Ku<ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[], ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[]>) => void;
 
-export class Ku <TStateEntries extends ChannelDataType<string, {}>[], TMessageingEntries extends ChannelDataType<string, {}>[]> {
+export class Ku <TStateEntries extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[], TMessageingEntries extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[]> {
     private isDown = false;
 
     private constructor(private pub: RedisType, private sub: RedisType) {
@@ -169,7 +169,7 @@ export class Ku <TStateEntries extends ChannelDataType<string, {}>[], TMessagein
         };
     }
 
-    public static async init<_TChannelDataList extends ChannelDataType<string, {}>[], _TMessageList extends ChannelDataType<string, {}>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
+    public static async init<_TChannelDataList extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[], _TMessageList extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const ku = new Ku<_TChannelDataList, _TMessageList>(pub, sub);
