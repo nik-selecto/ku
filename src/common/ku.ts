@@ -184,7 +184,7 @@ export class Ku <TStateEntries extends ChannelDataType<string, {}>[], TMessagein
         ku.listenersStorage = new Map();
 
         if (!isFirstInit) {
-            await Promise.all(Object.entries((KU_DEFAULT_BEGIN_STATES_ACC)).map(([k, v]) => pub.set(k, JSON.stringify(v))));
+            await Promise.all(KU_DEFAULT_BEGIN_STATES_ACC.map(([k, v]) => pub.set(k, JSON.stringify(v))));
             await pub.set(KU_ALREADY_INIT, KU_ALREADY_INIT);
             await pub.del(KU_ALREADY_DOWN);
         } else if (isDown) {
