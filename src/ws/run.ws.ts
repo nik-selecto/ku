@@ -1,10 +1,7 @@
-import { Ku } from './ku';
-import { WsChannelDataType } from './ws/ws-initialization';
+import { wsInitialization } from './ws-initialization';
 
 async function main() {
-    const rC = await Ku.init();
-    rC.proposeState<WsChannelDataType>('ws', { ws: 'open' });
-    rC.disconnect();
+    await wsInitialization();
 }
 
 main().catch((error) => {

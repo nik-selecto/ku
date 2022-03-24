@@ -7,7 +7,8 @@ type RmListenerType = { offCb: OffCbType, channel: string };
 type AssertionCbType<TState> = (actual: TState, expected: Partial<TState>) => boolean;
 type DefaultChannelsType = 'rm-listener' | 'redis-down';
 
-const REDIS_CONTROLLER_ALREADY_INIT = 'redis-controller-is-already-init';
+const KU_ALREADY_INIT = 'ku-is-already-init';
+const KU_ALREADY_DOWN = 'ku-is-already-down';
 const MESSAGE = 'message' as const;
 const PROPOSITION_POSTFIX = '-proposition' as const;
 const STR_EMPTY_OBJ = '{}' as const;
@@ -48,12 +49,14 @@ export class Ku {
                 },
                 'redis-down': () => {
                     const disconnect = () => {
-                        this.pub.del(REDIS_CONTROLLER_ALREADY_INIT).then(() => {
-                            this.pub.disconnect();
-                            this.sub.disconnect();
-                            this.isDown = true;
+                        this.pub.del(KU_ALREADY_INIT).then(() => {
+                            this.pub.set(KU_ALREADY_DOWN, KU_ALREADY_DOWN).then(() => {
+                                this.pub.disconnect();
+                                this.sub.disconnect();
+                                this.isDown = true;
 
-                            console.info('Disconnect from Redis');
+                                console.info('Disconnect from Redis');
+                            });
                         });
                     };
 
@@ -193,19 +196,23 @@ export class Ku {
         const pub = new Redis();
         const sub = pub.duplicate();
         const redisController = new Ku(pub, sub);
-        const isFirstInit = await pub.get(REDIS_CONTROLLER_ALREADY_INIT);
+        const isFirstInit = await pub.get(KU_ALREADY_INIT);
+        const isDown = await pub.get(KU_ALREADY_DOWN);
         const allChannels = [...DEFAULT_CHANNELS, ...channels].reduce((acc, channel) => {
             acc.push(channel, `${channel}${PROPOSITION_POSTFIX}`);
 
             return acc;
         }, [] as string[]);
 
+        redisController.listenersStorage = new Map();
+
         if (!isFirstInit) {
             await Promise.all(Object.entries((DEFAULT_BEGIN_STATES_ACC)).map(([k, v]) => pub.set(k, JSON.stringify(v))));
-            await pub.set(REDIS_CONTROLLER_ALREADY_INIT, REDIS_CONTROLLER_ALREADY_INIT);
+            await pub.set(KU_ALREADY_INIT, KU_ALREADY_INIT);
+            await pub.del(KU_ALREADY_DOWN);
+        } else if (isDown) {
+            process.exit(0);
         }
-
-        redisController.listenersStorage = new Map();
 
         await sub.subscribe(...allChannels);
 
@@ -222,11 +229,5 @@ export class Ku {
             this.pub.disconnect();
             this.sub.disconnect();
         }
-    }
-
-    public static finally() {
-        const redis = new Redis();
-
-        redis.del(REDIS_CONTROLLER_ALREADY_INIT).then(() => redis.disconnect());
     }
 }
