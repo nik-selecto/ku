@@ -1,10 +1,10 @@
-import { Ku } from './ku';
-import { WsChannelDataType } from './ws/ws-initialization';
+import { Ku } from './common/ku';
+import { WsMessagingListType, WsStateType } from './ws/ku-ws.artifacts';
 
 async function main() {
-    const rC = await Ku.init();
-    rC.proposeState<WsChannelDataType>('ws', { ws: 'open' });
-    rC.disconnect();
+    const ku = await Ku.init<[WsStateType], WsMessagingListType>();
+    ku.proposeState('ws', { ws: 'open' });
+    ku.disconnect();
 }
 
 main().catch((error) => {

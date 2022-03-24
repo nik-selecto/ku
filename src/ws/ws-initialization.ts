@@ -3,19 +3,14 @@ import { EventEmitter } from 'stream';
 import { v4 } from 'uuid';
 import Ws, { WebSocket } from 'ws';
 import { KuRequest } from '../api/index.api';
-import { ChannelDataType, Ku } from '../ku';
+import { Ku } from '../common/ku';
+import {
+    CLOSE_WS_EVENT, CONNECTING_WS_EVENT, OPEN_WS_EVENT, WsMessagingListType, WsStateType,
+} from './ku-ws.artifacts';
 import { IWsMessage } from './ws-types';
 
-export type WsChannelDataType = ChannelDataType<'ws', {
-    ws: 'open' | 'close',
-}>;
-
-const CONNECTING_WS_EVENT = 'ws-is-connecting';
-const OPEN_WS_EVENT = 'ws-is-open';
-const CLOSE_WS_EVENT = 'ws-is-close';
-
 export async function wsInitialization() {
-    const redisController = await Ku.init('ws');
+    const redisController = await Ku.init<[WsStateType], WsMessagingListType>('ws');
     // TODO --------------------------------------------------- this code need more elegant solution! ---------------------------------------------------
     const emitter = new EventEmitter();
     let websocket: WebSocket | null = null;
@@ -47,7 +42,7 @@ export async function wsInitialization() {
     });
     // ----------------------- or at least make general solution like function for situations like this. ------------------------------------------------
 
-    redisController.onStateProposition<WsChannelDataType>('ws', { ws: 'open' }, async (state, rC) => {
+    redisController.onStateProposition('ws', { ws: 'open' }, async (state, ku) => {
         const { instanceServers, token } = (await KuRequest.POST['/api/v1/bullet-private'].exec())!;
         const [server] = instanceServers;
         const id = v4();
@@ -56,11 +51,11 @@ export async function wsInitialization() {
         emitter.emit(CONNECTING_WS_EVENT);
 
         ws.on('message', (message: string) => {
-            const jMessage = JSON.parse(message) as IWsMessage;
+            const jMessage = JSON.parse(message) as Required<IWsMessage>;
 
             if (jMessage.type !== 'message') return;
 
-            redisController.message(jMessage.subject!, jMessage);
+            redisController.message(jMessage.subject, jMessage);
         });
 
         ws.on('open', () => {
@@ -76,13 +71,13 @@ export async function wsInitialization() {
                 clearInterval(stopPingPong);
                 console.info('ws.on("close")');
 
-                rC.patchState<WsChannelDataType>('ws', { ws: 'close' });
+                ku.patchState<WsStateType>('ws', { ws: 'close' });
             });
 
-            rC.patchState<WsChannelDataType>('ws', { ws: 'open' });
+            ku.patchState<WsStateType>('ws', { ws: 'open' });
         });
 
-        rC.onStateProposition<WsChannelDataType>(
+        ku.onStateProposition<WsStateType>(
             'ws',
             { ws: 'close' },
             () => {

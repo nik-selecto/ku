@@ -1,37 +1,14 @@
 import Redis, { Redis as RedisType } from 'ioredis';
+import { ArrayElement } from '../utils/arr-el.type';
+import { KU_DEFAULT_BEGIN_STATES_ACC } from './ku-default-state';
+import {
+    AssertionCbType, ChannelDataType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
+} from './ku.artifacts';
 
 // eslint-disable-next-line no-use-before-define
-type OnStateCbType<TState> = (state: TState, rC: Ku) => void;
-type OffCbType = (...args: any[]) => void;
-type RmListenerType = { offCb: OffCbType, channel: string };
-type AssertionCbType<TState> = (actual: TState, expected: Partial<TState>) => boolean;
-type DefaultChannelsType = 'rm-listener' | 'redis-down';
+type OnStateCbType<TState> = (state: TState, ku: Ku<ChannelDataType<string, {}>[], ChannelDataType<string, {}>[]>) => void;
 
-const KU_ALREADY_INIT = 'ku-is-already-init';
-const KU_ALREADY_DOWN = 'ku-is-already-down';
-const MESSAGE = 'message' as const;
-const PROPOSITION_POSTFIX = '-proposition' as const;
-const STR_EMPTY_OBJ = '{}' as const;
-
-function defaultAssertionCb<TState>(actual: TState, expected: Partial<TState>) {
-    return !(Object.entries(expected) as [keyof TState, any][]).some(([k, v]) => actual[k] !== v);
-}
-
-const DEFAULT_CHANNELS: DefaultChannelsType[] = [
-    'rm-listener',
-    'redis-down',
-];
-
-const DEFAULT_BEGIN_STATES_ACC: Record<string, Record<string, any>> = {
-    ws: {
-        ws: 'close',
-        subscriptions: [],
-    },
-};
-
-export type ChannelDataType<TChannel extends string, TData extends {}> = [TChannel, TData];
-
-export class Ku {
+export class Ku <TStateEntries extends ChannelDataType<string, {}>[], TMessageingEntries extends ChannelDataType<string, {}>[]> {
     private isDown = false;
 
     private constructor(private pub: RedisType, private sub: RedisType) {
@@ -84,7 +61,7 @@ export class Ku {
         this.onRedisDown = cb.bind(this, pub, sub);
     }
 
-    public patchState<T extends ChannelDataType<string, {}>>(name: T[0], changes: Partial<T[1]>): void {
+    public patchState<T extends ArrayElement<TStateEntries>>(name: T[0], changes: Partial<T[1]>): void {
         if (this.isDown) return;
 
         const { pub } = this;
@@ -99,7 +76,7 @@ export class Ku {
             .then((updatedState) => pub.publish(name, updatedState));
     }
 
-    public onStatePatched<T extends ChannelDataType<string, {}>>(
+    public onStatePatched<T extends ArrayElement<TStateEntries>>(
         name: T[0],
         expectedState: Partial<T[1]>,
         cb: OnStateCbType<T[1]>,
@@ -122,13 +99,13 @@ export class Ku {
         };
     }
 
-    public proposeState<T extends ChannelDataType<string, {}>>(name: T[0], proposition: Partial<T[1]>): void {
+    public proposeState<T extends ArrayElement<TStateEntries>>(name: T[0], proposition: Partial<T[1]>): void {
         if (this.isDown) return;
 
         this.pub.publish(`${name}${PROPOSITION_POSTFIX}`, JSON.stringify(proposition));
     }
 
-    public onStateProposition<T extends ChannelDataType<string, {}>>(
+    public onStateProposition<T extends ArrayElement<TStateEntries>>(
         name: T[0],
         expectedProposition: Partial<T[1]>,
         cb: OnStateCbType<T[1]>,
@@ -138,7 +115,7 @@ export class Ku {
             isExpectedState?: AssertionCbType<T[1]>
         },
     ): RmListenerType {
-        const rC = this;
+        const ku = this;
         const { pub, sub } = this;
         const {
             isExpectedProposition = defaultAssertionCb,
@@ -156,7 +133,7 @@ export class Ku {
 
                     if (onlyIfStateLike && !isExpectedState(jState, onlyIfStateLike)) return;
 
-                    cb(jState, rC);
+                    cb(jState, ku);
                 });
         };
 
@@ -169,18 +146,18 @@ export class Ku {
         };
     }
 
-    public message<T extends ChannelDataType<string, {}>>(channel: T[0], message: T[1]): void {
+    public message<T extends ArrayElement<TMessageingEntries>>(channel: T[0], message: T[1]): void {
         if (this.isDown) return;
 
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ChannelDataType<string, {}>>(channel: T[0], cb: OnStateCbType<T[1]>): RmListenerType {
-        const rC = this;
+    public onMessage<T extends ArrayElement<TMessageingEntries>>(channel: T[0], cb: OnStateCbType<T[1]>): RmListenerType {
+        const ku = this;
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
 
-            cb(JSON.parse(data), rC);
+            cb(JSON.parse(data), ku);
         };
 
         this.sub.on(MESSAGE, fullCallback);
@@ -192,10 +169,10 @@ export class Ku {
         };
     }
 
-    public static async init(...channels: string[]): Promise<Ku> {
+    public static async init<_TChannelDataList extends ChannelDataType<string, {}>[], _TMessageList extends ChannelDataType<string, {}>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
         const pub = new Redis();
         const sub = pub.duplicate();
-        const redisController = new Ku(pub, sub);
+        const ku = new Ku<_TChannelDataList, _TMessageList>(pub, sub);
         const isFirstInit = await pub.get(KU_ALREADY_INIT);
         const isDown = await pub.get(KU_ALREADY_DOWN);
         const allChannels = [...DEFAULT_CHANNELS, ...channels].reduce((acc, channel) => {
@@ -204,10 +181,10 @@ export class Ku {
             return acc;
         }, [] as string[]);
 
-        redisController.listenersStorage = new Map();
+        ku.listenersStorage = new Map();
 
         if (!isFirstInit) {
-            await Promise.all(Object.entries((DEFAULT_BEGIN_STATES_ACC)).map(([k, v]) => pub.set(k, JSON.stringify(v))));
+            await Promise.all(Object.entries((KU_DEFAULT_BEGIN_STATES_ACC)).map(([k, v]) => pub.set(k, JSON.stringify(v))));
             await pub.set(KU_ALREADY_INIT, KU_ALREADY_INIT);
             await pub.del(KU_ALREADY_DOWN);
         } else if (isDown) {
@@ -218,7 +195,7 @@ export class Ku {
 
         console.info('Connect to Redis');
 
-        return redisController;
+        return ku;
     }
 
     public disconnect(all: boolean = true) {
