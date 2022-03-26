@@ -6,7 +6,7 @@ import { KuRequest } from '../api/index.api';
 import { Ku } from '../common/ku';
 import {
     CLOSE_WS_EVENT, CONNECTING_WS_EVENT, OPEN_WS_EVENT, WsMessagingListType, WsStateType,
-} from './ku-ws.artifacts';
+} from './ws.resources';
 import { IWsMessage } from './ws-types';
 
 export async function wsInitialization() {

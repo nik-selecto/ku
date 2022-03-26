@@ -1,4 +1,4 @@
-import { KU_ALL_STATE_TYPE } from '../common/ku-default-state';
+import { KU_ALL_STATE_TYPE } from '../common/ku.mapper';
 
 export const CONNECTING_WS_EVENT = 'ws-is-connecting';
 export const OPEN_WS_EVENT = 'ws-is-open';

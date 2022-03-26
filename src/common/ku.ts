@@ -1,9 +1,9 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import { ArrayElement } from '../utils/arr-el.type';
-import { KU_DEFAULT_BEGIN_STATES_ACC, TChannelMapper } from './ku-default-state';
+import { KU_DEFAULT_BEGIN_STATES_ACC, TChannelMapper } from './ku.mapper';
 import {
     AssertionCbType, ChannelDataType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
-} from './ku.artifacts';
+} from './ku.resources';
 
 // eslint-disable-next-line no-use-before-define
 type OnStateCbType<TState> = (state: TState, ku: Ku<ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[], ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[]>) => void;

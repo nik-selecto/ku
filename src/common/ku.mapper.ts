@@ -1,6 +1,6 @@
 import { ArrayElement } from '../utils/arr-el.type';
 import { WsSubjectEnum } from '../ws/ws-types';
-import { ChannelDataType } from './ku.artifacts';
+import { ChannelDataType } from './ku.resources';
 
 type TSubscribe<T extends WsSubjectEnum, U extends {} = {}> = ChannelDataType<T, {
     subject: T,
