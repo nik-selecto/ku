@@ -1,5 +1,3 @@
-export type ChannelDataType<TChannel extends string, TData extends {}> = [TChannel, TData];
-
 // eslint-disable-next-line no-use-before-define
 export type OffCbType = (...args: any[]) => void;
 export type RmListenerType = { offCb: OffCbType, channel: string };

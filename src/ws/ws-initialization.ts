@@ -4,14 +4,20 @@ import { v4 } from 'uuid';
 import Ws, { WebSocket } from 'ws';
 import { KuRequest } from '../api/index.api';
 import { Ku } from '../common/ku';
+import { KU_ALL_STATE_TYPE, PubSub } from '../common/ku.mapper';
+import { IWsMessage, WsSubjectEnum } from './ws-types';
 import {
-    CLOSE_WS_EVENT, CONNECTING_WS_EVENT, OPEN_WS_EVENT, WsMessagingListType, WsStateType,
+    CLOSE_WS_EVENT, CONNECTING_WS_EVENT, OPEN_WS_EVENT,
 } from './ws.resources';
-import { IWsMessage } from './ws-types';
 
 export async function wsInitialization() {
-    const redisController = await Ku.init<[WsStateType], WsMessagingListType>('ws');
-    // TODO --------------------------------------------------- this code need more elegant solution! ---------------------------------------------------
+    const redisController = await Ku.init<
+        [KU_ALL_STATE_TYPE[0]],
+        [
+            PubSub<WsSubjectEnum.TRADE_TICKER>,
+            PubSub<WsSubjectEnum.TRADE_SNAPSHOT>,
+        ]>('ws');
+    // TODO -------------------------------- this code need more elegant solution!
     const emitter = new EventEmitter();
     let websocket: WebSocket | null = null;
     let isConnecting = false;
@@ -40,7 +46,7 @@ export async function wsInitialization() {
 
         ws?.close();
     });
-    // ----------------------- or at least make general solution like function for situations like this. ------------------------------------------------
+    // ----------------------- or at least make general solution like function for situations like this.
 
     redisController.onStateProposition('ws', { ws: 'open' }, async (state, ku) => {
         const { instanceServers, token } = (await KuRequest.POST['/api/v1/bullet-private'].exec())!;
@@ -71,13 +77,13 @@ export async function wsInitialization() {
                 clearInterval(stopPingPong);
                 console.info('ws.on("close")');
 
-                ku.patchState<WsStateType>('ws', { ws: 'close' });
+                ku.patchState('ws', { ws: 'close' });
             });
 
-            ku.patchState<WsStateType>('ws', { ws: 'open' });
+            ku.patchState('ws', { ws: 'open' });
         });
 
-        ku.onStateProposition<WsStateType>(
+        ku.onStateProposition(
             'ws',
             { ws: 'close' },
             () => {

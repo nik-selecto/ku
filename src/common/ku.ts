@@ -1,14 +1,15 @@
 import Redis, { Redis as RedisType } from 'ioredis';
-import { ArrayElement } from '../utils/arr-el.type';
-import { KU_DEFAULT_BEGIN_STATES_ACC, TChannelMapper } from './ku.mapper';
 import {
-    AssertionCbType, ChannelDataType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
+    ArrElement, DuetType, KU_DEFAULT_BEGIN_STATES_ACC, PubSub, StateMapper,
+} from './ku.mapper';
+import {
+    AssertionCbType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 // eslint-disable-next-line no-use-before-define
-type OnStateCbType<TState> = (state: TState, ku: Ku<ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[], ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[]>) => void;
+type OnStateCbType<TState> = (state: TState, ku: Ku<DuetType<StateMapper[0], StateMapper[1]>[], PubSub<string>[]>) => void;
 
-export class Ku <TStateEntries extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[], TMessageingEntries extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[]> {
+export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[], TMessageingEntries extends PubSub<string>[]> {
     private isDown = false;
 
     private constructor(private pub: RedisType, private sub: RedisType) {
@@ -61,7 +62,7 @@ export class Ku <TStateEntries extends ChannelDataType<TChannelMapper[0], TChann
         this.onRedisDown = cb.bind(this, pub, sub);
     }
 
-    public patchState<T extends ArrayElement<TStateEntries>>(name: T[0], changes: Partial<T[1]>): void {
+    public patchState<T extends ArrElement<TStateEntries>>(name: T[0], changes: Partial<T[1]>): void {
         if (this.isDown) return;
 
         const { pub } = this;
@@ -76,7 +77,7 @@ export class Ku <TStateEntries extends ChannelDataType<TChannelMapper[0], TChann
             .then((updatedState) => pub.publish(name, updatedState));
     }
 
-    public onStatePatched<T extends ArrayElement<TStateEntries>>(
+    public onStatePatched<T extends ArrElement<TStateEntries>>(
         name: T[0],
         expectedState: Partial<T[1]>,
         cb: OnStateCbType<T[1]>,
@@ -99,13 +100,13 @@ export class Ku <TStateEntries extends ChannelDataType<TChannelMapper[0], TChann
         };
     }
 
-    public proposeState<T extends ArrayElement<TStateEntries>>(name: T[0], proposition: Partial<T[1]>): void {
+    public proposeState<T extends ArrElement<TStateEntries>>(name: T[0], proposition: Partial<T[1]>): void {
         if (this.isDown) return;
 
         this.pub.publish(`${name}${PROPOSITION_POSTFIX}`, JSON.stringify(proposition));
     }
 
-    public onStateProposition<T extends ArrayElement<TStateEntries>>(
+    public onStateProposition<T extends ArrElement<TStateEntries>>(
         name: T[0],
         expectedProposition: Partial<T[1]>,
         cb: OnStateCbType<T[1]>,
@@ -146,13 +147,13 @@ export class Ku <TStateEntries extends ChannelDataType<TChannelMapper[0], TChann
         };
     }
 
-    public message<T extends ArrayElement<TMessageingEntries>>(channel: T[0], message: T[1]): void {
+    public message<T extends ArrElement<TMessageingEntries>>(channel: T[0][0], message: T[0][1]): void {
         if (this.isDown) return;
 
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ArrayElement<TMessageingEntries>>(channel: T[0], cb: OnStateCbType<T[1]>): RmListenerType {
+    public onMessage<T extends ArrElement<TMessageingEntries>>(channel: T[1][0], cb: OnStateCbType<T[1][1]>): RmListenerType {
         const ku = this;
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
@@ -169,7 +170,7 @@ export class Ku <TStateEntries extends ChannelDataType<TChannelMapper[0], TChann
         };
     }
 
-    public static async init<_TChannelDataList extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[], _TMessageList extends ChannelDataType<TChannelMapper[0], TChannelMapper[1]>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
+    public static async init<_TChannelDataList extends DuetType<[any, any][0], [any, any][1]>[], _TMessageList extends PubSub<string>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const ku = new Ku<_TChannelDataList, _TMessageList>(pub, sub);
