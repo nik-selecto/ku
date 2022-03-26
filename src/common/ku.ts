@@ -6,9 +6,6 @@ import {
     AssertionCbType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
-// eslint-disable-next-line no-use-before-define
-type OnStateCbType<TState> = (state: TState) => void;
-
 export class Ku<
     TStateEntries extends DuetType<
         [string, Record<string, any>][0], [string, Record<string, any>][1]
@@ -87,7 +84,7 @@ export class Ku<
     public onStatePatched<T extends ArrElement<TStateEntries>>(
         name: T[0],
         expectedState: Partial<T[1]>,
-        cb: OnStateCbType<T[1]>,
+        cb: (state: T[1]) => void,
         isExpectedState: AssertionCbType<T[1]> = defaultAssertionCb,
     ): RmListenerType {
         const fullCallback = (channel: string, data: string) => {
@@ -116,7 +113,7 @@ export class Ku<
     public onStateProposition<T extends ArrElement<TStateEntries>>(
         name: T[0],
         expectedProposition: Partial<T[1]>,
-        cb: OnStateCbType<T[1]>,
+        cb: (state: T[1]) => void,
         options: {
             onlyIfStateLike?: Partial<T[1]>,
             isExpectedProposition?: AssertionCbType<T[1]>,
@@ -159,7 +156,7 @@ export class Ku<
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ArrElement<TMessagingEntries>>(channel: T[0], cb: OnStateCbType<T[2]>): RmListenerType {
+    public onMessage<T extends ArrElement<TMessagingEntries>>(channel: T[0], cb: (state: T[2]) => void): RmListenerType {
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
 
