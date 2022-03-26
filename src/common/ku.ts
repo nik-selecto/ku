@@ -1,15 +1,15 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import {
-    ArrElement, DuetType, KU_DEFAULT_BEGIN_STATES_ACC, PubSub, StateMapper,
+    ArrElement, DuetType, KU_DEFAULT_BEGIN_STATES_ACC, ChannelPubSub, StateMapper,
 } from './ku.mapper';
 import {
     AssertionCbType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 // eslint-disable-next-line no-use-before-define
-type OnStateCbType<TState> = (state: TState, ku: Ku<DuetType<StateMapper[0], StateMapper[1]>[], PubSub<string>[]>) => void;
+type OnStateCbType<TState> = (state: TState, ku: Ku<DuetType<StateMapper[0], StateMapper[1]>[], ChannelPubSub<string>[]>) => void;
 
-export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[], TMessageingEntries extends PubSub<string>[]> {
+export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[], TMessageingEntries extends ChannelPubSub[]> {
     private isDown = false;
 
     private constructor(private pub: RedisType, private sub: RedisType) {
@@ -147,13 +147,13 @@ export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[],
         };
     }
 
-    public message<T extends ArrElement<TMessageingEntries>>(channel: T[0][0], message: T[0][1]): void {
+    public message<T extends ArrElement<TMessageingEntries>>(channel: T[0], message: T[1]): void {
         if (this.isDown) return;
 
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ArrElement<TMessageingEntries>>(channel: T[1][0], cb: OnStateCbType<T[1][1]>): RmListenerType {
+    public onMessage<T extends ArrElement<TMessageingEntries>>(channel: T[0], cb: OnStateCbType<T[2]>): RmListenerType {
         const ku = this;
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
@@ -170,7 +170,7 @@ export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[],
         };
     }
 
-    public static async init<_TChannelDataList extends DuetType<[any, any][0], [any, any][1]>[], _TMessageList extends PubSub<string>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
+    public static async init<_TChannelDataList extends DuetType<[any, any][0], [any, any][1]>[], _TMessageList extends ChannelPubSub<string>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const ku = new Ku<_TChannelDataList, _TMessageList>(pub, sub);
