@@ -4,7 +4,7 @@ import { v4 } from 'uuid';
 import Ws, { WebSocket } from 'ws';
 import { KuRequest } from '../api/index.api';
 import { Ku } from '../common/ku';
-import { KU_ALL_STATE_TYPE, ChannelPubSub } from '../common/ku.mapper';
+import { KU_ALL_STATE_TYPE, PubSubType } from '../common/ku.mapper';
 import { IWsMessage, WsSubjectEnum } from './ws-types';
 import {
     CLOSE_WS_EVENT, CONNECTING_WS_EVENT, OPEN_WS_EVENT,
@@ -14,8 +14,8 @@ export async function wsInitialization() {
     const redisController = await Ku.init<
         [KU_ALL_STATE_TYPE[0]],
         [
-            ChannelPubSub<WsSubjectEnum.TRADE_TICKER>,
-            ChannelPubSub<WsSubjectEnum.TRADE_SNAPSHOT>,
+            PubSubType<'subscribe' | 'unsubscribe', {}, WsSubjectEnum>,
+            PubSubType<WsSubjectEnum, {}, WsSubjectEnum>,
         ]>('ws');
     // TODO -------------------------------- this code need more elegant solution!
     const emitter = new EventEmitter();

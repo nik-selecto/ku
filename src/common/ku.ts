@@ -1,17 +1,18 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import {
-    ArrElement, ChannelPubSub, KU_DEFAULT_BEGIN_STATES_ACC,
+    ArrElement, PubSubType, KU_DEFAULT_BEGIN_STATES_ACC,
 } from './ku.mapper';
 import {
     PreCbAndGuardType, defaultPreCbGuard, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 export class Ku<
-    TStateEntries extends [
+    TStates extends [
         [string, Record<string, any>][0], [string, Record<string, any>][1]
     ][],
-    TMessagingEntries extends ChannelPubSub<
-        string, Record<string, any>, Record<string, any>
+    TChats extends PubSubType<
+        string, Record<string, any>,
+        string, Record<string, any>
     >[],
     > {
     private isDown = false;
@@ -66,7 +67,7 @@ export class Ku<
         this.onRedisDown = cb.bind(this, pub, sub);
     }
 
-    public patchState<T extends ArrElement<TStateEntries>>(name: T[0], changes: Partial<T[1]>): void {
+    public patchState<T extends ArrElement<TStates>>(name: T[0], changes: Partial<T[1]>): void {
         if (this.isDown) return;
 
         const { pub } = this;
@@ -81,15 +82,15 @@ export class Ku<
             .then((updatedState) => pub.publish(name, updatedState));
     }
 
-    public onStatePatched<T extends ArrElement<TStateEntries>>(
+    public onStatePatched<T extends ArrElement<TStates>>(
         name: T[0],
         cb: (state: T[1]) => void,
         expectedState: Partial<T[1]>,
         options: {
             preCbAndGuard: PreCbAndGuardType<T[1]>,
         } = {
-            preCbAndGuard: defaultPreCbGuard,
-        },
+                preCbAndGuard: defaultPreCbGuard,
+            },
     ): RmListenerType {
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
@@ -109,13 +110,13 @@ export class Ku<
         };
     }
 
-    public proposeState<T extends ArrElement<TStateEntries>>(name: T[0], proposition: Partial<T[1]>): void {
+    public proposeState<T extends ArrElement<TStates>>(name: T[0], proposition: Partial<T[1]>): void {
         if (this.isDown) return;
 
         this.pub.publish(`${name}${PROPOSITION_POSTFIX}`, JSON.stringify(proposition));
     }
 
-    public onStateProposition<T extends ArrElement<TStateEntries>>(
+    public onStateProposition<T extends ArrElement<TStates>>(
         name: T[0],
         expectedProposition: Partial<T[1]>,
         cb: (state: T[1]) => void,
@@ -155,13 +156,13 @@ export class Ku<
         };
     }
 
-    public message<T extends ArrElement<TMessagingEntries>>(channel: T[0], message: T[1]): void {
+    public message<T extends ArrElement<TChats[0]>>(channel: T[0], message: T[1]): void {
         if (this.isDown) return;
 
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ArrElement<TMessagingEntries>>(channel: T[0], cb: (state: T[2]) => void): RmListenerType {
+    public onMessage<T extends ArrElement<TChats[1]>>(channel: T[0], cb: (state: T[2]) => void): RmListenerType {
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
 
@@ -177,10 +178,13 @@ export class Ku<
         };
     }
 
-    public static async init<_TChannelDataList extends [[string, any][0], [string, any][1]][], _TMessageList extends ChannelPubSub<string>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
+    public static async init<
+        _TState extends [[string, any][0], [string, any][1]][],
+        _TChats extends PubSubType<string, Record<string, any>, string, Record<string, any>>[],
+    >(...channels: string[]): Promise<Ku<_TState, _TChats>> {
         const pub = new Redis();
         const sub = pub.duplicate();
-        const ku = new Ku<_TChannelDataList, _TMessageList>(pub, sub);
+        const ku = new Ku<_TState, _TChats>(pub, sub);
         const isFirstInit = await pub.get(KU_ALREADY_INIT);
         const isDown = await pub.get(KU_ALREADY_DOWN);
         const allChannels = [...DEFAULT_CHANNELS, ...channels].reduce((acc, channel) => {

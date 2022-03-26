@@ -25,7 +25,11 @@ export const KU_DEFAULT_BEGIN_STATES_ACC: [
 export type StateMapper = ArrElement<KU_ALL_STATE_TYPE>;
 
 // --- PUBSUB ---
-export type ChannelPubSub<
-    Channel extends string = string,
+export type PubSubType<
+    PChannel extends string = string,
     Pub extends {} = {},
-    Sub extends {} = {}> = [Channel, Pub, Sub];
+    SChannel extends string = string,
+    Sub extends {} = {}> = [
+        [PChannel, Pub],
+        [SChannel, Sub],
+    ];
