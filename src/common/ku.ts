@@ -9,7 +9,14 @@ import {
 // eslint-disable-next-line no-use-before-define
 type OnStateCbType<TState> = (state: TState) => void;
 
-export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[], TMessageingEntries extends ChannelPubSub[]> {
+export class Ku<
+    TStateEntries extends DuetType<
+        [string, Record<string, any>][0], [string, Record<string, any>][1]
+    >[],
+    TMessagingEntries extends ChannelPubSub<
+        string, Record<string, any>, Record<string, any>
+    >[],
+    > {
     private isDown = false;
 
     private constructor(private pub: RedisType, private sub: RedisType) {
@@ -146,13 +153,13 @@ export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[],
         };
     }
 
-    public message<T extends ArrElement<TMessageingEntries>>(channel: T[0], message: T[1]): void {
+    public message<T extends ArrElement<TMessagingEntries>>(channel: T[0], message: T[1]): void {
         if (this.isDown) return;
 
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ArrElement<TMessageingEntries>>(channel: T[0], cb: OnStateCbType<T[2]>): RmListenerType {
+    public onMessage<T extends ArrElement<TMessagingEntries>>(channel: T[0], cb: OnStateCbType<T[2]>): RmListenerType {
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
 
