@@ -3,7 +3,7 @@ import {
     ArrElement, ChannelPubSub, DuetType, KU_DEFAULT_BEGIN_STATES_ACC,
 } from './ku.mapper';
 import {
-    AssertionCbType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
+    PreCbAndGuardType, defaultPreCbGuard, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 export class Ku<
@@ -85,12 +85,17 @@ export class Ku<
         name: T[0],
         expectedState: Partial<T[1]>,
         cb: (state: T[1]) => void,
-        isExpectedState: AssertionCbType<T[1]> = defaultAssertionCb,
+        options: {
+            isExpectedState: PreCbAndGuardType<T[1]>,
+        } = {
+            isExpectedState: defaultPreCbGuard,
+        },
     ): RmListenerType {
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
 
             const jData = JSON.parse(data) as T[1];
+            const { isExpectedState } = options;
 
             if (isExpectedState(jData, expectedState)) cb(jData);
         };
@@ -116,15 +121,15 @@ export class Ku<
         cb: (state: T[1]) => void,
         options: {
             onlyIfStateLike?: Partial<T[1]>,
-            isExpectedProposition?: AssertionCbType<T[1]>,
-            isExpectedState?: AssertionCbType<T[1]>
+            isExpectedProposition?: PreCbAndGuardType<T[1]>,
+            isExpectedState?: PreCbAndGuardType<T[1]>
         },
     ): RmListenerType {
         const { pub, sub } = this;
         const {
-            isExpectedProposition = defaultAssertionCb,
+            isExpectedProposition = defaultPreCbGuard,
             onlyIfStateLike,
-            isExpectedState = defaultAssertionCb,
+            isExpectedState = defaultPreCbGuard,
         } = options;
         const fullCallback = (channel: string, proposition: string) => {
             if (channel !== `${name}${PROPOSITION_POSTFIX}`) return;

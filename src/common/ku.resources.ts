@@ -1,10 +1,12 @@
 // eslint-disable-next-line no-use-before-define
 export type OffCbType = (...args: any[]) => void;
 export type RmListenerType = { offCb: OffCbType, channel: string };
-export type AssertionCbType<TState> = (actual: TState, expected: Partial<TState>) => boolean;
+export type PreCbAndGuardType<TState> = (actual: TState, expected?: Partial<TState>) => boolean;
 export type DefaultChannelsType = 'rm-listener' | 'redis-down';
 
-export function defaultAssertionCb<TState>(actual: TState, expected: Partial<TState>) {
+export function defaultPreCbGuard<TState>(actual: TState, expected?: Partial<TState>) {
+    if (!expected) return true;
+
     return !(Object.entries(expected) as [keyof TState, any][]).some(([k, v]) => actual[k] !== v);
 }
 

@@ -8,7 +8,8 @@ export type KU_ALL_STATE_TYPE = [
         'ws',
         {
             ws: 'close' | 'open',
-            subscriptions: string[],
+            subscribes: string[],
+            unsubscribes: string[],
         },
     ],
 ];
@@ -17,7 +18,8 @@ export const KU_DEFAULT_BEGIN_STATES_ACC: KU_ALL_STATE_TYPE = [
         'ws',
         {
             ws: 'close',
-            subscriptions: [],
+            subscribes: [],
+            unsubscribes: [],
         },
     ],
 ];
