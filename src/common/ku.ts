@@ -1,13 +1,13 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import {
-    ArrElement, DuetType, KU_DEFAULT_BEGIN_STATES_ACC, ChannelPubSub, StateMapper,
+    ArrElement, ChannelPubSub, DuetType, KU_DEFAULT_BEGIN_STATES_ACC,
 } from './ku.mapper';
 import {
     AssertionCbType, defaultAssertionCb, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 // eslint-disable-next-line no-use-before-define
-type OnStateCbType<TState> = (state: TState, ku: Ku<DuetType<StateMapper[0], StateMapper[1]>[], ChannelPubSub<string>[]>) => void;
+type OnStateCbType<TState> = (state: TState) => void;
 
 export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[], TMessageingEntries extends ChannelPubSub[]> {
     private isDown = false;
@@ -88,7 +88,7 @@ export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[],
 
             const jData = JSON.parse(data) as T[1];
 
-            if (isExpectedState(jData, expectedState)) cb(jData, this);
+            if (isExpectedState(jData, expectedState)) cb(jData);
         };
 
         this.sub.on(MESSAGE, fullCallback);
@@ -116,7 +116,6 @@ export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[],
             isExpectedState?: AssertionCbType<T[1]>
         },
     ): RmListenerType {
-        const ku = this;
         const { pub, sub } = this;
         const {
             isExpectedProposition = defaultAssertionCb,
@@ -134,7 +133,7 @@ export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[],
 
                     if (onlyIfStateLike && !isExpectedState(jState, onlyIfStateLike)) return;
 
-                    cb(jState, ku);
+                    cb(jState);
                 });
         };
 
@@ -154,11 +153,10 @@ export class Ku <TStateEntries extends DuetType<[any, any][0], [any, any][1]>[],
     }
 
     public onMessage<T extends ArrElement<TMessageingEntries>>(channel: T[0], cb: OnStateCbType<T[2]>): RmListenerType {
-        const ku = this;
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
 
-            cb(JSON.parse(data), ku);
+            cb(JSON.parse(data));
         };
 
         this.sub.on(MESSAGE, fullCallback);

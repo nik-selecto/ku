@@ -48,7 +48,7 @@ export async function wsInitialization() {
     });
     // ----------------------- or at least make general solution like function for situations like this.
 
-    redisController.onStateProposition('ws', { ws: 'open' }, async (state, ku) => {
+    redisController.onStateProposition('ws', { ws: 'open' }, async () => {
         const { instanceServers, token } = (await KuRequest.POST['/api/v1/bullet-private'].exec())!;
         const [server] = instanceServers;
         const id = v4();
@@ -77,13 +77,13 @@ export async function wsInitialization() {
                 clearInterval(stopPingPong);
                 console.info('ws.on("close")');
 
-                ku.patchState('ws', { ws: 'close' });
+                redisController.patchState('ws', { ws: 'close' });
             });
 
-            ku.patchState('ws', { ws: 'open' });
+            redisController.patchState('ws', { ws: 'open' });
         });
 
-        ku.onStateProposition(
+        redisController.onStateProposition(
             'ws',
             { ws: 'close' },
             () => {
