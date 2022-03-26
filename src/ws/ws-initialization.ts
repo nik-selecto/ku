@@ -14,8 +14,8 @@ export async function wsInitialization() {
     const redisController = await Ku.init<
         [KU_ALL_STATE_TYPE[0]],
         [
-            PubSubType<'subscribe' | 'unsubscribe', {}, WsSubjectEnum>,
-            PubSubType<WsSubjectEnum, {}, WsSubjectEnum>,
+            PubSubType<'subscribe' | 'unsubscribe', {}>,
+            PubSubType<WsSubjectEnum, {}>,
         ]>('ws');
     // TODO -------------------------------- this code need more elegant solution!
     const emitter = new EventEmitter();

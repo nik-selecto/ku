@@ -26,10 +26,6 @@ export type StateMapper = ArrElement<KU_ALL_STATE_TYPE>;
 
 // --- PUBSUB ---
 export type PubSubType<
-    PChannel extends string = string,
+    Channel extends string = string,
     Pub extends {} = {},
-    SChannel extends string = string,
-    Sub extends {} = {}> = [
-        [PChannel, Pub],
-        [SChannel, Sub],
-    ];
+    Sub extends {} = {}> = [Channel, Pub, Sub];

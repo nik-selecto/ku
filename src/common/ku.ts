@@ -11,60 +11,29 @@ export class Ku<
         [string, Record<string, any>][0], [string, Record<string, any>][1]
     ][],
     TChats extends PubSubType<
-        string, Record<string, any>,
-        string, Record<string, any>
+        string, Record<string, any>, Record<string, any>
     >[],
     > {
-    private isDown = false;
+    public message<T extends ArrElement<TChats>>(channel: T[0], message: T[1]): void {
+        if (this.isDown) return;
 
-    private constructor(private pub: RedisType, private sub: RedisType) {
-        sub.on(MESSAGE, (channel: DefaultChannelsType, data: string) => {
-            if (this.isDown) return;
-
-            const resolver: Record<DefaultChannelsType, (() => void) | undefined> = {
-                'rm-listener': () => {
-                    const jData = JSON.parse(data) as Record<keyof RmListenerType, string>;
-                    const myCb = this.listenersStorage.get(jData.offCb);
-
-                    if (!myCb) return;
-
-                    sub.removeListener(jData.channel, myCb);
-                },
-                'redis-down': () => {
-                    const disconnect = () => {
-                        this.pub.del(KU_ALREADY_INIT).then(() => {
-                            this.pub.set(KU_ALREADY_DOWN, KU_ALREADY_DOWN).then(() => {
-                                this.pub.disconnect();
-                                this.sub.disconnect();
-                                this.isDown = true;
-
-                                console.info('Disconnect from Redis');
-                            });
-                        });
-                    };
-
-                    if (!this.onRedisDown) {
-                        disconnect();
-                    } else if (this.onRedisDown instanceof Promise) {
-                        (this.onRedisDown() as Promise<void>).then(() => disconnect());
-                    } else {
-                        this.onRedisDown();
-                        disconnect();
-                    }
-                },
-            };
-
-            resolver[channel]?.();
-        });
+        this.pub.publish(channel, JSON.stringify(message));
     }
 
-    private listenersStorage!: Map<string, OffCbType>;
+    public onMessage<T extends ArrElement<TChats>>(channel: T[0], cb: (state: T[2]) => void): RmListenerType {
+        const fullCallback = (_channel: string, data: string) => {
+            if (channel !== _channel) return;
 
-    private onRedisDown?: () => Promise<void> | void;
+            cb(JSON.parse(data));
+        };
 
-    public setOnRedisDown(cb: (pub: RedisType, sub: RedisType) => Promise<void> | void) {
-        const { pub, sub } = this;
-        this.onRedisDown = cb.bind(this, pub, sub);
+        this.sub.on(MESSAGE, fullCallback);
+        this.listenersStorage.set(fullCallback.toString(), fullCallback);
+
+        return {
+            channel,
+            offCb: fullCallback,
+        };
     }
 
     public patchState<T extends ArrElement<TStates>>(name: T[0], changes: Partial<T[1]>): void {
@@ -156,31 +125,24 @@ export class Ku<
         };
     }
 
-    public message<T extends ArrElement<TChats[0]>>(channel: T[0], message: T[1]): void {
-        if (this.isDown) return;
-
-        this.pub.publish(channel, JSON.stringify(message));
+    public setOnRedisDown(cb: (pub: RedisType, sub: RedisType) => Promise<void> | void) {
+        const { pub, sub } = this;
+        this.onRedisDown = cb.bind(this, pub, sub);
     }
 
-    public onMessage<T extends ArrElement<TChats[1]>>(channel: T[0], cb: (state: T[2]) => void): RmListenerType {
-        const fullCallback = (_channel: string, data: string) => {
-            if (channel !== _channel) return;
-
-            cb(JSON.parse(data));
-        };
-
-        this.sub.on(MESSAGE, fullCallback);
-        this.listenersStorage.set(fullCallback.toString(), fullCallback);
-
-        return {
-            channel,
-            offCb: fullCallback,
-        };
+    public disconnect(all: boolean = true) {
+        if (all) {
+            this.pub.publish(('redis-down' as DefaultChannelsType), STR_EMPTY_OBJ);
+        } else {
+            this.isDown = true;
+            this.pub.disconnect();
+            this.sub.disconnect();
+        }
     }
 
     public static async init<
         _TState extends [[string, any][0], [string, any][1]][],
-        _TChats extends PubSubType<string, Record<string, any>, string, Record<string, any>>[],
+        _TChats extends PubSubType<string, Record<string, any>, Record<string, any>>[],
     >(...channels: string[]): Promise<Ku<_TState, _TChats>> {
         const pub = new Redis();
         const sub = pub.duplicate();
@@ -210,13 +172,50 @@ export class Ku<
         return ku;
     }
 
-    public disconnect(all: boolean = true) {
-        if (all) {
-            this.pub.publish(('redis-down' as DefaultChannelsType), STR_EMPTY_OBJ);
-        } else {
-            this.isDown = true;
-            this.pub.disconnect();
-            this.sub.disconnect();
-        }
+    private isDown = false;
+
+    private constructor(private pub: RedisType, private sub: RedisType) {
+        sub.on(MESSAGE, (channel: DefaultChannelsType, data: string) => {
+            if (this.isDown) return;
+
+            const resolver: Record<DefaultChannelsType, (() => void) | undefined> = {
+                'rm-listener': () => {
+                    const jData = JSON.parse(data) as Record<keyof RmListenerType, string>;
+                    const myCb = this.listenersStorage.get(jData.offCb);
+
+                    if (!myCb) return;
+
+                    sub.removeListener(jData.channel, myCb);
+                },
+                'redis-down': () => {
+                    const disconnect = () => {
+                        this.pub.del(KU_ALREADY_INIT).then(() => {
+                            this.pub.set(KU_ALREADY_DOWN, KU_ALREADY_DOWN).then(() => {
+                                this.pub.disconnect();
+                                this.sub.disconnect();
+                                this.isDown = true;
+
+                                console.info('Disconnect from Redis');
+                            });
+                        });
+                    };
+
+                    if (!this.onRedisDown) {
+                        disconnect();
+                    } else if (this.onRedisDown instanceof Promise) {
+                        (this.onRedisDown() as Promise<void>).then(() => disconnect());
+                    } else {
+                        this.onRedisDown();
+                        disconnect();
+                    }
+                },
+            };
+
+            resolver[channel]?.();
+        });
     }
+
+    private listenersStorage!: Map<string, OffCbType>;
+
+    private onRedisDown?: () => Promise<void> | void;
 }
