@@ -22,10 +22,5 @@ export const KU_DEFAULT_BEGIN_STATES_ACC: [
         },
     ],
 ];
+export type WsSendChannel = 'ws-send';
 export type StateMapper = ArrElement<KU_ALL_STATE_TYPE>;
-
-// --- PUBSUB ---
-export type PubSubType<
-    Channel extends string = string,
-    Pub extends {} = {},
-    Sub extends {} = {}> = [Channel, Pub, Sub];

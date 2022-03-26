@@ -1,18 +1,14 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import {
-    ArrElement, PubSubType, KU_DEFAULT_BEGIN_STATES_ACC,
+    ArrElement, KU_DEFAULT_BEGIN_STATES_ACC,
 } from './ku.mapper';
 import {
-    PreCbAndGuardType, defaultPreCbGuard, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
+    DefaultChannelsType, defaultPreCbGuard, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PreCbAndGuardType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 export class Ku<
-    TStates extends [
-        [string, Record<string, any>][0], [string, Record<string, any>][1]
-    ][],
-    TChats extends PubSubType<
-        string, Record<string, any>, Record<string, any>
-    >[],
+    TStates extends [string, Record<string, any>][],
+    TChats extends [string, Record<string, any>, Record<string, any>][],
     > {
     public message<T extends ArrElement<TChats>>(channel: T[0], message: T[1]): void {
         if (this.isDown) return;
@@ -20,7 +16,7 @@ export class Ku<
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ArrElement<TChats>>(channel: T[0], cb: (state: T[2]) => void): RmListenerType {
+    public onMessage<T extends ArrElement<TChats>>(channel: T[0], cb: (message: T[2]) => void): RmListenerType {
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
 
@@ -142,8 +138,8 @@ export class Ku<
 
     public static async init<
         _TState extends [[string, any][0], [string, any][1]][],
-        _TChats extends PubSubType<string, Record<string, any>, Record<string, any>>[],
-    >(...channels: string[]): Promise<Ku<_TState, _TChats>> {
+        _TChats extends [string, Record<string, any>, Record<string, any>][],
+    >(channels: (ArrElement<_TChats>[0] | ArrElement<_TState[0]>)[]): Promise<Ku<_TState, _TChats>> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const ku = new Ku<_TState, _TChats>(pub, sub);
