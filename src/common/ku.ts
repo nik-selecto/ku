@@ -1,15 +1,15 @@
 import Redis, { Redis as RedisType } from 'ioredis';
 import {
-    ArrElement, ChannelPubSub, DuetType, KU_DEFAULT_BEGIN_STATES_ACC,
+    ArrElement, ChannelPubSub, KU_DEFAULT_BEGIN_STATES_ACC,
 } from './ku.mapper';
 import {
     PreCbAndGuardType, defaultPreCbGuard, DefaultChannelsType, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 export class Ku<
-    TStateEntries extends DuetType<
+    TStateEntries extends [
         [string, Record<string, any>][0], [string, Record<string, any>][1]
-    >[],
+    ][],
     TMessagingEntries extends ChannelPubSub<
         string, Record<string, any>, Record<string, any>
     >[],
@@ -83,19 +83,19 @@ export class Ku<
 
     public onStatePatched<T extends ArrElement<TStateEntries>>(
         name: T[0],
-        expectedState: Partial<T[1]>,
         cb: (state: T[1]) => void,
+        expectedState: Partial<T[1]>,
         options: {
-            isExpectedState: PreCbAndGuardType<T[1]>,
+            preCbAndGuard: PreCbAndGuardType<T[1]>,
         } = {
-            isExpectedState: defaultPreCbGuard,
+            preCbAndGuard: defaultPreCbGuard,
         },
     ): RmListenerType {
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
 
             const jData = JSON.parse(data) as T[1];
-            const { isExpectedState } = options;
+            const { preCbAndGuard: isExpectedState } = options;
 
             if (isExpectedState(jData, expectedState)) cb(jData);
         };
@@ -177,7 +177,7 @@ export class Ku<
         };
     }
 
-    public static async init<_TChannelDataList extends DuetType<[any, any][0], [any, any][1]>[], _TMessageList extends ChannelPubSub<string>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
+    public static async init<_TChannelDataList extends [[string, any][0], [string, any][1]][], _TMessageList extends ChannelPubSub<string>[]>(...channels: string[]): Promise<Ku<_TChannelDataList, _TMessageList>> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const ku = new Ku<_TChannelDataList, _TMessageList>(pub, sub);
