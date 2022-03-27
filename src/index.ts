@@ -17,7 +17,7 @@ async function main() {
         });
     }, { ws: 'open' }, { orInFuture: true });
 
-    await pause(10);
+    await pause(7);
 
     ku.disconnect();
 }

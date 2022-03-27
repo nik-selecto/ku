@@ -22,7 +22,8 @@ export async function wsInitialization() {
     let websocket: WebSocket | null = null;
     let isConnecting = false;
 
-    emitter.on(CONNECTING_WS_EVENT, () => {
+    emitter.on(CONNECTING_WS_EVENT, (ws) => {
+        websocket = ws;
         isConnecting = true;
     });
     emitter.on(CLOSE_WS_EVENT, () => {
@@ -31,17 +32,15 @@ export async function wsInitialization() {
     });
 
     const getWs = () => {
-        if (websocket) {
-            if (isConnecting) return Promise.resolve(websocket);
+        if (websocket) return Promise.resolve(websocket);
 
-            if (websocket.readyState < 2) return Promise.resolve(null);
-        }
-
-        return new Promise<WebSocket>((resolve) => {
-            emitter.once(OPEN_WS_EVENT, (ws) => {
-                resolve(ws);
-            });
-        });
+        return isConnecting
+            ? new Promise<WebSocket>((resolve) => {
+                emitter.once(OPEN_WS_EVENT, (ws) => {
+                    resolve(ws);
+                });
+            })
+            : Promise.resolve(null);
     };
 
     redisController.setOnRedisDown(async () => {
@@ -57,7 +56,7 @@ export async function wsInitialization() {
         const id = v4();
         const ws = new Ws(`${server.endpoint}${qs.stringify({ token, id }, { addQueryPrefix: true })}`);
 
-        emitter.emit(CONNECTING_WS_EVENT);
+        emitter.emit(CONNECTING_WS_EVENT, ws);
 
         ws.on('message', (message: string) => {
             const jMessage = JSON.parse(message) as Required<IWsMessage>;

@@ -39,7 +39,7 @@ export class Ku<
 
         pub.get(name)
             .then((state) => {
-                const updatedState = JSON.stringify({ ...JSON.parse(state ?? STR_EMPTY_OBJ), changes });
+                const updatedState = JSON.stringify({ ...JSON.parse(state ?? STR_EMPTY_OBJ), ...changes });
 
                 return pub.set(name, updatedState)
                     .then(() => updatedState);
@@ -224,12 +224,19 @@ export class Ku<
 
                     if (!this.onRedisDown) {
                         disconnect();
-                    } else if (this.onRedisDown instanceof Promise) {
-                        (this.onRedisDown() as Promise<void>).then(() => disconnect());
-                    } else {
-                        this.onRedisDown();
-                        disconnect();
+
+                        return;
                     }
+
+                    const downResult = this.onRedisDown();
+
+                    if (downResult instanceof Promise) {
+                        downResult.then(() => disconnect());
+
+                        return;
+                    }
+
+                    disconnect();
                 },
             };
 
