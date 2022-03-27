@@ -1,5 +1,5 @@
 import { WsSubjectEnum } from './enums/ws-subject.enum';
-import { WsSubscriptionTypeEnum } from './enums/ws-subscription.type';
+import { WsSubscriptionType } from './enums/ws-subscription.type';
 import { WithUSDT } from './general/with-usdt.type';
 import { WsPub } from './general/ws-pub';
 
@@ -19,12 +19,12 @@ export type SubMarketTicker = WsPub<{
 
 export type PubMarketTickerType = {
     topic: `/market/ticker:${string}`
-    type: WsSubscriptionTypeEnum,
+    type: WsSubscriptionType,
 }
 
 export function publishMarketTicker(
     coins: [WithUSDT, ...WithUSDT[]],
-    subscriptionType: WsSubscriptionTypeEnum = WsSubscriptionTypeEnum.SUBSCRIBE,
+    subscriptionType: WsSubscriptionType = 'subscribe',
 ): PubMarketTickerType {
     return {
         topic: `/market/ticker:${coins.join(',')}`,

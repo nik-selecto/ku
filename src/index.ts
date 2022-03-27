@@ -19,13 +19,15 @@ async function main() {
 
     ku.ifState('ws', async () => {
         ku.message('ws-send', publishMarketTicker(['LUNA-USDT']));
+        await pause(4);
+        ku.message('ws-send', publishMarketTicker(['LUNA-USDT'], 'unsubscribe'));
+        console.log('stop ws');
     }, { ws: 'open' }, { orInFuture: true });
-
-    await pause(5);
+    await pause(9);
     ku.rmListener(listenerId);
-
-    await pause(10);
-
+    console.log('stop ku');
+    await pause(6);
+    console.log('silent');
     ku.disconnect();
 }
 
