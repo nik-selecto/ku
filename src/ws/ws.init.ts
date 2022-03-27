@@ -6,11 +6,12 @@ import { KuRequest } from '../api/index.api';
 import { Ku } from '../common/ku';
 import { KU_ALL_STATE_TYPE, WsSendChannel } from '../common/ku.mapper';
 import { IWsMessage, WsSubjectEnum } from './ws-types';
-import {
-    CLOSE_WS_EVENT, CONNECTING_WS_EVENT, OPEN_WS_EVENT,
-} from './ws.resources';
 
-export async function wsInitialization() {
+const CONNECTING_WS_EVENT = 'ws-is-connecting' as const;
+const OPEN_WS_EVENT = 'ws-is-open' as const;
+const CLOSE_WS_EVENT = 'ws-is-close' as const;
+
+export async function wsInit() {
     const redisController = await Ku.init<
         [KU_ALL_STATE_TYPE[0]],
         [
