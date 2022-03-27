@@ -10,7 +10,7 @@ export enum WsSubjectEnum {
     // TICK = 'tick',
     // FUNDING_UPDATE = 'funding.update',
     // ORDER_CHANGE = 'orderChange',
-    // ACCOUNT_BALANCE = 'account.balance',
+    ACCOUNT_BALANCE = 'account.balance',
     // DEBT_RATIO = 'debt.ratio',
     // POSITION_STATUS = 'position.status',
     // ORDER_OPEN = 'order.open',

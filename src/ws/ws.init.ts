@@ -61,7 +61,11 @@ export async function wsInit() {
         ws.on('message', (message: string) => {
             const jMessage = JSON.parse(message) as WsSubAnyMessageType;
 
-            if (jMessage.type !== 'message') return;
+            if (jMessage.type !== 'message') {
+                console.info(jMessage);
+
+                return;
+            }
 
             redisController.message(jMessage.subject, jMessage);
         });
@@ -95,6 +99,10 @@ export async function wsInit() {
         );
 
         redisController.onMessage('ws-send', (message) => {
+            console.info('--------------------- WS.send() --------------------------------');
+            console.info(message);
+            console.info('----------------------------------------------------------------');
+
             ws.send(JSON.stringify({ ...message, id, response: true }));
         });
     }, { onlyIfStateLike: { ws: 'close' } });
