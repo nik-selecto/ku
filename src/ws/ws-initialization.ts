@@ -31,14 +31,17 @@ export async function wsInitialization() {
     });
 
     const getWs = () => {
-        if (websocket) return Promise.resolve(websocket);
-        return isConnecting
-            ? Promise.resolve(null)
-            : new Promise<WebSocket>((resolve) => {
-                emitter.once(OPEN_WS_EVENT, (ws) => {
-                    resolve(ws);
-                });
+        if (websocket) {
+            if (isConnecting) return Promise.resolve(websocket);
+
+            if (websocket.readyState < 2) return Promise.resolve(null);
+        }
+
+        return new Promise<WebSocket>((resolve) => {
+            emitter.once(OPEN_WS_EVENT, (ws) => {
+                resolve(ws);
             });
+        });
     };
 
     redisController.setOnRedisDown(async () => {
@@ -60,6 +63,8 @@ export async function wsInitialization() {
             const jMessage = JSON.parse(message) as Required<IWsMessage>;
 
             if (jMessage.type !== 'message') return;
+
+            console.log(jMessage);
 
             redisController.message(jMessage.subject, jMessage);
         });
@@ -93,7 +98,7 @@ export async function wsInitialization() {
         );
 
         redisController.onMessage('ws-send', (message) => {
-            ws.send(JSON.stringify(message));
+            ws.send(JSON.stringify({ ...message, id, response: true }));
         });
     }, { onlyIfStateLike: { ws: 'close' } });
 }

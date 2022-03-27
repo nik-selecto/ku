@@ -47,26 +47,52 @@ export class Ku<
             .then((updatedState) => pub.publish(name, updatedState));
     }
 
+    public ifState<T extends ArrElement<TStates>>(
+        name: T[0],
+        cb: (state: T[1]) => void,
+        expectedState: Partial<T[1]>,
+        options: {
+            orInFuture?: boolean,
+            preCbAndGuard?: PreCbAndGuardType<T[1]>,
+        } = {},
+    ) {
+        const { preCbAndGuard = defaultPreCbGuard, orInFuture = false } = options;
+
+        this.pub.get(name)
+            .then((actualStrState) => {
+                const actualState = JSON.parse(actualStrState!);
+
+                if (preCbAndGuard(actualState, expectedState)) {
+                    cb(actualState);
+
+                    return;
+                }
+
+                if (orInFuture) {
+                    this.onStatePatched(name, cb, expectedState, { preCbAndGuard, often: 'once' });
+                }
+            });
+    }
+
     public onStatePatched<T extends ArrElement<TStates>>(
         name: T[0],
         cb: (state: T[1]) => void,
         expectedState: Partial<T[1]>,
         options: {
-            preCbAndGuard: PreCbAndGuardType<T[1]>,
-        } = {
-                preCbAndGuard: defaultPreCbGuard,
-            },
+            often?: 'on' | 'once',
+            preCbAndGuard?: PreCbAndGuardType<T[1]>,
+        } = {},
     ): RmListenerType {
+        const { preCbAndGuard = defaultPreCbGuard, often = 'on' } = options;
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
 
             const jData = JSON.parse(data) as T[1];
-            const { preCbAndGuard: isExpectedState } = options;
 
-            if (isExpectedState(jData, expectedState)) cb(jData);
+            if (preCbAndGuard(jData, expectedState)) cb(jData);
         };
 
-        this.sub.on(MESSAGE, fullCallback);
+        this.sub[often](MESSAGE, fullCallback);
         this.listenersStorage.set(fullCallback.toString(), fullCallback);
 
         return {
@@ -139,7 +165,7 @@ export class Ku<
     public static async init<
         _TState extends [[string, any][0], [string, any][1]][],
         _TChats extends [string, Record<string, any>, Record<string, any>][],
-    >(channels: (ArrElement<_TChats>[0] | ArrElement<_TState[0]>)[]): Promise<Ku<_TState, _TChats>> {
+        >(channels: (ArrElement<_TChats>[0] | ArrElement<_TState[0]>)[]): Promise<Ku<_TState, _TChats>> {
         const pub = new Redis();
         const sub = pub.duplicate();
         const ku = new Ku<_TState, _TChats>(pub, sub);
