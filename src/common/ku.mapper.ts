@@ -1,10 +1,8 @@
-import { TradeTickerPubType, TradeTickerSubType, WsSubjectEnum } from '../ws/ws-types';
-
 // --- STATE ---
 export type ArrElement<TArr extends unknown[]> = TArr extends (infer ElementType)[]
     ? ElementType
     : never;
-export type KU_ALL_STATE_TYPE = [
+export type KU_STATE_TYPE = [
     [
         'ws',
         {
@@ -14,8 +12,8 @@ export type KU_ALL_STATE_TYPE = [
     ],
 ];
 export const KU_DEFAULT_BEGIN_STATES_ACC: [
-    ArrElement<KU_ALL_STATE_TYPE>[0],
-    Partial<ArrElement<KU_ALL_STATE_TYPE>[1]>
+    ArrElement<KU_STATE_TYPE>[0],
+    Partial<ArrElement<KU_STATE_TYPE>[1]>
 ][] = [
     [
         'ws',
@@ -24,12 +22,3 @@ export const KU_DEFAULT_BEGIN_STATES_ACC: [
         },
     ],
 ];
-export type WsSubjectPubSub = [
-    [WsSubjectEnum.TRADE_TICKER,
-        TradeTickerPubType,
-        TradeTickerSubType],
-    [WsSubjectEnum.TRADE_SNAPSHOT,
-        {},
-        {}]
-];
-export type WsSendChannel = 'ws-send';

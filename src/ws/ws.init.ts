@@ -4,8 +4,10 @@ import { v4 } from 'uuid';
 import Ws, { WebSocket } from 'ws';
 import { KuRequest } from '../api/index.api';
 import { Ku } from '../common/ku';
-import { KU_ALL_STATE_TYPE, WsSendChannel } from '../common/ku.mapper';
-import { IWsMessage, WsSubjectEnum } from './ws-types';
+import { KU_STATE_TYPE } from '../common/ku.mapper';
+import { WsSubjectEnum } from './types/enums/ws-subject.enum';
+import { WsSubAnyMessageType } from './types/general/ws-any-sub-message.type';
+import { WS_MAPPER } from './ws.mapper';
 
 const CONNECTING_WS_EVENT = 'ws-is-connecting' as const;
 const OPEN_WS_EVENT = 'ws-is-open' as const;
@@ -13,11 +15,8 @@ const CLOSE_WS_EVENT = 'ws-is-close' as const;
 
 export async function wsInit() {
     const redisController = await Ku.init<
-        [KU_ALL_STATE_TYPE[0]],
-        [
-            [WsSendChannel, {}, {}],
-            [WsSubjectEnum, {}, {}],
-        ]>(['ws-send', 'ws', ...Object.values(WsSubjectEnum)]);
+        [KU_STATE_TYPE[0]],
+        WS_MAPPER>(['ws-send', 'ws', ...Object.values(WsSubjectEnum)]);
     // TODO -------------------------------- this code need more elegant solution!
     const emitter = new EventEmitter();
     let websocket: WebSocket | null = null;
@@ -60,7 +59,7 @@ export async function wsInit() {
         emitter.emit(CONNECTING_WS_EVENT, ws);
 
         ws.on('message', (message: string) => {
-            const jMessage = JSON.parse(message) as Required<IWsMessage>;
+            const jMessage = JSON.parse(message) as WsSubAnyMessageType;
 
             if (jMessage.type !== 'message') return;
 
