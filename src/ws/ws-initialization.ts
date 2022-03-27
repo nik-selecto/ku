@@ -63,8 +63,6 @@ export async function wsInitialization() {
 
             if (jMessage.type !== 'message') return;
 
-            console.log(jMessage);
-
             redisController.message(jMessage.subject, jMessage);
         });
 

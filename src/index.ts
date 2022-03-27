@@ -10,10 +10,13 @@ async function main() {
     ]>(['ws', WsSubjectEnum.TRADE_TICKER, 'ws-send']);
 
     ku.proposeState('ws', { ws: 'open' });
-    ku.ifState('ws', () => {
+    ku.onMessage(WsSubjectEnum.TRADE_TICKER, (message) => {
+        console.log(message);
+    });
+    ku.ifState('ws', async () => {
         ku.message('ws-send', {
             type: 'subscribe',
-            topic: '/market/ticker:LUNA-USDT',
+            topic: '/market/ticker:BTC-USDT',
         });
     }, { ws: 'open' }, { orInFuture: true });
 
