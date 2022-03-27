@@ -1,5 +1,5 @@
 type WsMessageTypeType = 'message' | 'ack' | 'welcome' | 'error';
-
+type WsSubscribeUnsubscribeType = 'subscribe' | 'unsubscribe';
 // eslint-disable-next-line no-shadow
 export enum WsSubjectEnum {
     TRADE_TICKER = 'trade.ticker',
@@ -26,10 +26,12 @@ export interface IWsMessage {
     topic?: string, // TODO
 }
 
-export type TradeTickerMessageType = {
+type MarketTickerTopicType = `/market/ticker:${string}-USDT`;
+
+export type TradeTickerSubType = {
     type: 'message',
-    topic: `/market/ticker:${string}`,
-    subject: 'trade.ticker',
+    topic: MarketTickerTopicType,
+    subject: WsSubjectEnum.TRADE_TICKER,
     data: {
         sequence: string, // Sequence number
         price: string, // Last traded price
@@ -39,4 +41,9 @@ export type TradeTickerMessageType = {
         bestBid: string, // Best bid price
         bestBidSize: string // Best bid size
     }
+}
+
+export type TradeTickerPubType = {
+    type: WsSubscribeUnsubscribeType,
+    topic: MarketTickerTopicType,
 }
