@@ -1,9 +1,11 @@
 import Redis, { Redis as RedisType } from 'ioredis';
+import { v4 } from 'uuid';
 import {
     ArrElement, KU_DEFAULT_BEGIN_STATES_ACC,
 } from './ku.mapper';
 import {
-    DefaultChannelsType, defaultPreCbGuard, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PreCbAndGuardType, PROPOSITION_POSTFIX, RmListenerType, STR_EMPTY_OBJ,
+    CHANNEL_RM_LISTENER,
+    DefaultChannelsType, defaultPreCbGuard, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PreCbAndGuardType, PROPOSITION_POSTFIX, STR_EMPTY_OBJ,
 } from './ku.resources';
 
 export class Ku<
@@ -16,20 +18,18 @@ export class Ku<
         this.pub.publish(channel, JSON.stringify(message));
     }
 
-    public onMessage<T extends ArrElement<TChats>>(channel: T[0], cb: (message: T[2]) => void): RmListenerType {
+    public onMessage<T extends ArrElement<TChats>>(channel: T[0], cb: (message: T[2]) => void): string {
         const fullCallback = (_channel: string, data: string) => {
             if (channel !== _channel) return;
 
             cb(JSON.parse(data));
         };
+        const listenerId = v4();
 
+        this.listenersStorage.set(listenerId, fullCallback);
         this.sub.on(MESSAGE, fullCallback);
-        this.listenersStorage.set(fullCallback.toString(), fullCallback);
 
-        return {
-            channel,
-            offCb: fullCallback,
-        };
+        return listenerId;
     }
 
     public patchState<T extends ArrElement<TStates>>(name: T[0], changes: Partial<T[1]>): void {
@@ -55,7 +55,7 @@ export class Ku<
             orInFuture?: boolean,
             preCbAndGuard?: PreCbAndGuardType<T[1]>,
         } = {},
-    ) {
+    ): void {
         const { preCbAndGuard = defaultPreCbGuard, orInFuture = false } = options;
 
         this.pub.get(name)
@@ -69,7 +69,7 @@ export class Ku<
                 }
 
                 if (orInFuture) {
-                    this.onStatePatched(name, cb, expectedState, { preCbAndGuard, often: 'once' });
+                    this.onStatePatched(name, cb, expectedState, { preCbAndGuard, howOften: 'once' });
                 }
             });
     }
@@ -79,11 +79,11 @@ export class Ku<
         cb: (state: T[1]) => void,
         expectedState: Partial<T[1]>,
         options: {
-            often?: 'on' | 'once',
+            howOften?: 'on' | 'once',
             preCbAndGuard?: PreCbAndGuardType<T[1]>,
         } = {},
-    ): RmListenerType {
-        const { preCbAndGuard = defaultPreCbGuard, often = 'on' } = options;
+    ): string | null {
+        const { preCbAndGuard = defaultPreCbGuard, howOften = 'on' } = options;
         const fullCallback = (channel: string, data: string) => {
             if (channel !== name) return;
 
@@ -91,14 +91,12 @@ export class Ku<
 
             if (preCbAndGuard(jData, expectedState)) cb(jData);
         };
+        const listenerId = v4();
 
-        this.sub[often](MESSAGE, fullCallback);
-        this.listenersStorage.set(fullCallback.toString(), fullCallback);
+        this.listenersStorage.set(listenerId, fullCallback);
+        this.sub[howOften](MESSAGE, fullCallback);
 
-        return {
-            offCb: fullCallback,
-            channel: name,
-        };
+        return listenerId;
     }
 
     public proposeState<T extends ArrElement<TStates>>(name: T[0], proposition: Partial<T[1]>): void {
@@ -116,7 +114,7 @@ export class Ku<
             isExpectedProposition?: PreCbAndGuardType<T[1]>,
             isExpectedState?: PreCbAndGuardType<T[1]>
         },
-    ): RmListenerType {
+    ): string {
         const { pub, sub } = this;
         const {
             isExpectedProposition = defaultPreCbGuard,
@@ -137,14 +135,12 @@ export class Ku<
                     cb(jState);
                 });
         };
+        const listenerId = v4();
 
-        sub.on(MESSAGE, fullCallback);
-        this.listenersStorage.set(fullCallback.toString(), fullCallback);
+        sub.addListener(MESSAGE, fullCallback);
+        this.listenersStorage.set(listenerId, fullCallback);
 
-        return {
-            channel: name,
-            offCb: fullCallback,
-        };
+        return listenerId;
     }
 
     public setOnRedisDown(cb: (pub: RedisType, sub: RedisType) => Promise<void> | void) {
@@ -160,6 +156,10 @@ export class Ku<
             this.pub.disconnect();
             this.sub.disconnect();
         }
+    }
+
+    public rmListener(listenerId: string) {
+        this.pub.publish(CHANNEL_RM_LISTENER, listenerId);
     }
 
     public static async init<
@@ -202,12 +202,11 @@ export class Ku<
 
             const resolver: Record<DefaultChannelsType, (() => void) | undefined> = {
                 'rm-listener': () => {
-                    const jData = JSON.parse(data) as Record<keyof RmListenerType, string>;
-                    const myCb = this.listenersStorage.get(jData.offCb);
+                    const myCb = this.listenersStorage.get(data);
 
                     if (!myCb) return;
 
-                    sub.removeListener(jData.channel, myCb);
+                    sub.removeListener(MESSAGE, myCb);
                 },
                 'redis-down': () => {
                     const disconnect = () => {

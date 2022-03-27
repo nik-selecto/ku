@@ -10,9 +10,11 @@ async function main() {
     ]>(['ws', WsSubjectEnum.TRADE_TICKER, 'ws-send']);
 
     ku.proposeState('ws', { ws: 'open' });
-    ku.onMessage(WsSubjectEnum.TRADE_TICKER, (message) => {
-        console.log(message);
+
+    const listenerId = ku.onMessage(WsSubjectEnum.TRADE_TICKER, () => {
+        process.stdout.write('.');
     });
+
     ku.ifState('ws', async () => {
         ku.message('ws-send', {
             type: 'subscribe',
@@ -20,7 +22,10 @@ async function main() {
         });
     }, { ws: 'open' }, { orInFuture: true });
 
-    await pause(7);
+    await pause(5);
+    ku.rmListener(listenerId);
+
+    await pause(10);
 
     ku.disconnect();
 }
