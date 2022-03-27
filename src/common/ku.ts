@@ -3,10 +3,28 @@ import { v4 } from 'uuid';
 import {
     ArrElement, KU_DEFAULT_BEGIN_STATES_ACC,
 } from './ku.mapper';
-import {
+
+type OffCbType = (...args: any[]) => void;
+type PreCbAndGuardType<TState> = (actual: TState, expected?: Partial<TState>) => boolean;
+type DefaultChannelsType = 'rm-listener' | 'redis-down';
+
+function defaultPreCbGuard<TState>(actual: TState, expected?: Partial<TState>) {
+    if (!expected) return true;
+
+    return !(Object.entries(expected) as [keyof TState, any][]).some(([k, v]) => actual[k] !== v);
+}
+
+const CHANNEL_RM_LISTENER = 'rm-listener';
+const CHANNEL_REDIS_DOWN = 'redis-down';
+const DEFAULT_CHANNELS: DefaultChannelsType[] = [
     CHANNEL_RM_LISTENER,
-    DefaultChannelsType, defaultPreCbGuard, DEFAULT_CHANNELS, KU_ALREADY_DOWN, KU_ALREADY_INIT, MESSAGE, OffCbType, PreCbAndGuardType, PROPOSITION_POSTFIX, STR_EMPTY_OBJ,
-} from './ku.resources';
+    CHANNEL_REDIS_DOWN,
+];
+const KU_ALREADY_INIT = 'ku-is-already-init';
+const KU_ALREADY_DOWN = 'ku-is-already-down';
+const MESSAGE = 'message' as const;
+const PROPOSITION_POSTFIX = '-proposition' as const;
+const STR_EMPTY_OBJ = '{}' as const;
 
 export class Ku<
     TStates extends [string, Record<string, any>][],

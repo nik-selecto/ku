@@ -4,14 +4,6 @@ import { TradeTickerPubType, TradeTickerSubType, WsSubjectEnum } from '../ws/ws-
 export type ArrElement<TArr extends unknown[]> = TArr extends (infer ElementType)[]
     ? ElementType
     : never;
-export type NonEmptyArray<TElement> = [TElement, ...TElement[]];
-export type NonEmptySequenceArray<Sequence extends unknown[]> = [...Sequence, ...[...Sequence][]];
-export type ArrElementByIndex<
-    TArr extends NonEmptyArray<unknown[]>, TIndex extends number
-    > = TArr[TIndex] extends (infer ElementType)
-    ? ElementType
-    : never;
-
 export type KU_ALL_STATE_TYPE = [
     [
         'ws',
@@ -41,4 +33,3 @@ export type WsSubjectPubSub = [
         {}]
 ];
 export type WsSendChannel = 'ws-send';
-export type StateMapper = ArrElement<KU_ALL_STATE_TYPE>;
