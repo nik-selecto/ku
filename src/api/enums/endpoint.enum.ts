@@ -10,10 +10,16 @@ export enum PostEndpointEnum {
 
 export enum GetEndpointEnum {
   ACCOUNTS = '/api/v1/accounts',
-  ORDER = '/api/v1/orders/',
+  ORDER = '/api/v1/orders',
   ACCOUNT_LEDGERS = '/api/v1/accounts/ledgers'
+}
+
+export enum DeleteEndpointEnum {
+  CANCEL_ORDER = '/api/v1/orders',
 }
 
 export const HOST = process.env.MODE === 'prod'
     ? 'https://api.kucoin.com' as const
     : 'https://openapi-sandbox.kucoin.com' as const;
+
+export type MethodType = 'GET' | 'POST' | 'DELETE';

@@ -1,4 +1,5 @@
 import { v4 } from 'uuid';
+import { CurrencyPair } from '../../../../general/currency.general-type';
 import { BaseMethod } from '../../../common/base-method.api';
 import { PostEndpointEnum } from '../../../enums/endpoint.enum';
 import { TOrderRes } from '../orders.type';
@@ -17,7 +18,7 @@ export class PostOrderLimitReq extends BaseMethod<TOrderRes, any, TLimitOrderBod
 }
 
 export const LIMIT = (side: 'buy' | 'sell') => ({
-    symbol(symbol: string) {
+    symbol(symbol: CurrencyPair) {
         return {
             price(price: string) {
                 return {

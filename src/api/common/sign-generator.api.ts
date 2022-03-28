@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import moment from 'moment';
 import QueryString from 'qs';
 import { API_KEY, API_PASSPHRASE, API_SECRET } from '../../credentials';
+import { MethodType } from '../enums/endpoint.enum';
 
 export class SignGenerator {
     // eslint-disable-next-line no-use-before-define
@@ -19,7 +20,7 @@ export class SignGenerator {
 
     public generateHeaders(
         options: {
-            method: 'GET' | 'POST',
+            method: MethodType,
             endpoint: string,
             params?: object,
             body?: object,
@@ -62,7 +63,7 @@ export class SignGenerator {
     private stringToSign(
         endpoint: string,
         timestamp: string,
-        method: 'GET' | 'POST',
+        method: MethodType,
         body?: object | string,
     ) {
         let _body: string | object = body ?? '';

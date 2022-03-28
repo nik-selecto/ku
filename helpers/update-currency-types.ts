@@ -25,6 +25,8 @@ async function main() {
 export type CurrencyUsdt = \`\${CurrencyType}-\${'USDT'}\`;
 
 export type UsdtCurrency = \`\${'USDT'}-\${CurrencyType}\`;
+
+export type CurrencyPair = CurrencyUsdt | UsdtCurrency;
 `,
 
         { encoding: 'utf-8' },

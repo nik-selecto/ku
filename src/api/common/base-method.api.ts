@@ -5,7 +5,7 @@ import { SignGenerator } from './sign-generator.api';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export class BaseMethod<TRes, TParams extends object = any, TBody extends object = any> {
     protected constructor(
-      private method: 'GET' | 'POST',
+      private method: 'GET' | 'POST' | 'DELETE',
       protected endpoint: string,
       protected params?: TParams,
       protected body?: TBody,

@@ -1,5 +1,6 @@
 /* eslint-disable max-classes-per-file */
 import { v4 } from 'uuid';
+import { CurrencyPair } from '../../general/currency.general-type';
 import { BaseMethod } from '../common/base-method.api';
 import { PostEndpointEnum } from '../enums/endpoint.enum';
 import { PostBulletPrivateReq } from './bullet/bullet.post.api';
@@ -22,7 +23,7 @@ class PostOrderMarketReq extends BaseMethod<TOrderRes, any, TMarketOrderBody> {
 export const MARKET = (
     side: 'buy' | 'sell',
 ) => ({
-    symbol(symbol: string) {
+    symbol(symbol: CurrencyPair) {
         return {
             size(sizeOrFunds: string) {
                 return new PostOrderMarketReq().setBody({
