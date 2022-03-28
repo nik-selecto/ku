@@ -11,6 +11,7 @@ export enum PostEndpointEnum {
 export enum GetEndpointEnum {
   ACCOUNTS = '/api/v1/accounts',
   ORDER = '/api/v1/orders/',
+  ACCOUNT_LEDGERS = '/api/v1/accounts/ledgers'
 }
 
 export const HOST = process.env.MODE === 'prod'
