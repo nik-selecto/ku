@@ -1,6 +1,8 @@
+import { CurrencyType } from '../../../general/currency.general-type';
+
 export type AccountInfoResDto = [{
   id: string,
-  currency: string,
+  currency: CurrencyType,
   type: 'main' | 'trade' | 'margin' | 'pool',
   balance: string,
   available: string,
@@ -10,5 +12,5 @@ export type AccountInfoResDto = [{
 export class AccountInfoParamsDto {
     type?: 'main' | 'trade' | 'margin';
 
-    currency?: string;
+    currency?: CurrencyType;
 }

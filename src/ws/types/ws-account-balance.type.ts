@@ -1,3 +1,4 @@
+import { CurrencyType } from '../../general/currency.general-type';
 import { WsSubjectEnum } from './enums/ws-subject.enum';
 import { WsSubscriptionType } from './enums/ws-subscription.type';
 import { WsPub } from './general/ws-pub';
@@ -30,7 +31,7 @@ export type SubAccountBalance = WsPub<{
         total: string, // total balance
         available: string, // available balance
         availableChange: string, // the change of available balance
-        currency: string, // currency
+        currency: CurrencyType, // currency
         hold: string, // hold amount
         holdChange: string, // the change of hold balance
         relationEvent: RelationEventType, // relation event

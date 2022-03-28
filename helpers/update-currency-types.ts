@@ -22,9 +22,9 @@ async function main() {
         ),
         `export type CurrencyType = ${typeString};
 
-export type Currency_USDT = \`\${CurrencyType}-\${'USDT'}\`;
+export type CurrencyUsdt = \`\${CurrencyType}-\${'USDT'}\`;
 
-export type USDT_Currency = \`\${'USDT'}-\${CurrencyType}\`;
+export type UsdtCurrency = \`\${'USDT'}-\${CurrencyType}\`;
 `,
 
         { encoding: 'utf-8' },
