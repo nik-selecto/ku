@@ -10,7 +10,8 @@
     "start:dev": "ts-node-dev src/index.ts",
     "test": "echo 'husky' will run 'test' script on every push. If you have tests - update 'test' script",
     "lint": "npx eslint --fix 'src/**/*.ts' './jest.config.ts'",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "helpers:update-currency": "npx ts-node helpers/update-currency-types.ts"
   },
   "husky": {
     "hooks": {
