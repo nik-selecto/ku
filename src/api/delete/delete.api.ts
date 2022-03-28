@@ -1,4 +1,5 @@
 import { DeleteEndpointEnum } from '../enums/endpoint.enum';
+import { CancelAllOrdersParamsDto, CancelAllOrdersReq } from './cancel-order/cancel-all-orders.delete.api';
 import { CancelOrderReq } from './cancel-order/cancel-order.delete.api';
 
 export class DeleteReq {
@@ -8,5 +9,15 @@ export class DeleteReq {
             return new CancelOrderReq(id);
         },
 
+    };
+
+    public static ['cancel/all/orders'] = {
+        setParams(params: CancelAllOrdersParamsDto) {
+            return new CancelAllOrdersReq(params);
+        },
+
+        exec() {
+            return new CancelAllOrdersReq().exec();
+        },
     };
 }

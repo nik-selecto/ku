@@ -16,6 +16,7 @@ export enum GetEndpointEnum {
 
 export enum DeleteEndpointEnum {
   CANCEL_ORDER = '/api/v1/orders',
+  CANCEL_ALL_ORDERS = '/api/v1/orders',
 }
 
 export const HOST = process.env.MODE === 'prod'
