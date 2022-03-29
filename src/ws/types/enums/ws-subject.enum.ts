@@ -4,7 +4,7 @@ export enum WsSubjectEnum {
     // TODO
     // TRADE_SNAPSHOT = 'trade.snapshot',
     TRADE_L2UPDATE = 'trade.l2update',
-    // LEVEL2 = 'level2',
+    LEVEL2 = 'level2',
     // TRADE_CANDLES_UPDATE = 'trade.candles.update',
     // TRADE_L3MATCH = 'trade.l3match',
     // TICK = 'tick',

@@ -14,7 +14,7 @@ export type PubLevel2MarketData = {
 };
 
 export type SubLevel2MarketData = WsSub<{
-    topic: '/market/level2:BTC-USDT',
+    topic: string,
     subject: WsSubjectEnum.TRADE_L2UPDATE,
     data: {
         sequenceStart: number,
