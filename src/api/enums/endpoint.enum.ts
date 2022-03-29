@@ -11,7 +11,9 @@ export enum PostEndpointEnum {
 export enum GetEndpointEnum {
   ACCOUNTS = '/api/v1/accounts',
   ORDER = '/api/v1/orders',
-  ACCOUNT_LEDGERS = '/api/v1/accounts/ledgers'
+  ACCOUNT_LEDGERS = '/api/v1/accounts/ledgers',
+  ORDER_BOOK_LEVEL_2_20 = '/api/v1/market/orderbook/level2_20',
+  ORDER_BOOK_LEVEL_2_100 = '/api/v1/market/orderbook/level2_100'
 }
 
 export enum DeleteEndpointEnum {

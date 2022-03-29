@@ -1,8 +1,10 @@
 import { KuRequest } from './api/index.api';
 
 async function main() {
-    const res = await KuRequest.DELETE['cancel/all/orders'].exec();
-
+    const res = await KuRequest
+        .GET['/api/v1/market/orderbook/level2_100']
+        .symbol('LUNA-USDT')
+        .exec();
     console.log(res);
 }
 

@@ -1,7 +1,9 @@
 /* eslint-disable max-classes-per-file */
+import { CurrencyPair } from '../../general/currency.general-type';
 import { GetEndpointEnum } from '../enums/endpoint.enum';
 import { GetAccountsReq } from './account-info/account-info.get.api';
 import { AccountLedgersParamsDto, GetAccountLedgersReq } from './account-ledgers/account-ledgers.get.api';
+import { Level2OrderBookReq } from './order-book/level-2.get.api';
 import { GetOrderInfoReq } from './order-info/order-info.get.api';
 
 export class GetReq {
@@ -19,6 +21,18 @@ export class GetReq {
         },
         exec() {
             return new GetAccountLedgersReq().exec();
+        },
+    };
+
+    public static [GetEndpointEnum.ORDER_BOOK_LEVEL_2_20] = {
+        symbol(s: CurrencyPair) {
+            return new Level2OrderBookReq(20, s);
+        },
+    };
+
+    public static [GetEndpointEnum.ORDER_BOOK_LEVEL_2_100] = {
+        symbol(s: CurrencyPair) {
+            return new Level2OrderBookReq(100, s);
         },
     };
 }
