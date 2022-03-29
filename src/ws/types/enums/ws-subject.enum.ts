@@ -3,7 +3,7 @@ export enum WsSubjectEnum {
     TRADE_TICKER = 'trade.ticker',
     // TODO
     // TRADE_SNAPSHOT = 'trade.snapshot',
-    // TRADE_L2UPDATE = 'trade.l2update',
+    TRADE_L2UPDATE = 'trade.l2update',
     // LEVEL2 = 'level2',
     // TRADE_CANDLES_UPDATE = 'trade.candles.update',
     // TRADE_L3MATCH = 'trade.l3match',

@@ -67,8 +67,8 @@ export class Ku<
 
     public ifState<T extends ArrElement<TStates>>(
         name: T[0],
-        cb: (state: T[1]) => void,
         expectedState: Partial<T[1]>,
+        cb: (state: T[1]) => void,
         options: {
             orInFuture?: boolean,
             preCbAndGuard?: PreCbAndGuardType<T[1]>,
@@ -87,15 +87,15 @@ export class Ku<
                 }
 
                 if (orInFuture) {
-                    this.onStatePatched(name, cb, expectedState, { preCbAndGuard, howOften: 'once' });
+                    this.onStatePatched(name, expectedState, cb, { preCbAndGuard, howOften: 'once' });
                 }
             });
     }
 
     public onStatePatched<T extends ArrElement<TStates>>(
         name: T[0],
-        cb: (state: T[1]) => void,
         expectedState: Partial<T[1]>,
+        cb: (state: T[1]) => void,
         options: {
             howOften?: 'on' | 'once',
             preCbAndGuard?: PreCbAndGuardType<T[1]>,
