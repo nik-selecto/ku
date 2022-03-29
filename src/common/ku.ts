@@ -74,7 +74,7 @@ export class Ku<
             preCbAndGuard?: PreCbAndGuardType<T[1]>,
         } = {},
     ): void {
-        const { preCbAndGuard = defaultPreCbGuard, orInFuture = false } = options;
+        const { preCbAndGuard = defaultPreCbGuard, orInFuture = true } = options;
 
         this.pub.get(name)
             .then((actualStrState) => {
