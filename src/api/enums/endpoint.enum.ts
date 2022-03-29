@@ -13,7 +13,8 @@ export enum GetEndpointEnum {
   ORDER = '/api/v1/orders',
   ACCOUNT_LEDGERS = '/api/v1/accounts/ledgers',
   ORDER_BOOK_LEVEL_2_20 = '/api/v1/market/orderbook/level2_20',
-  ORDER_BOOK_LEVEL_2_100 = '/api/v1/market/orderbook/level2_100'
+  ORDER_BOOK_LEVEL_2_100 = '/api/v1/market/orderbook/level2_100',
+  ORDER_BOOK_V3_LEVEL_2 = '/api/v3/market/orderbook/level2',
 }
 
 export enum DeleteEndpointEnum {

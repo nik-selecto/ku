@@ -26,13 +26,19 @@ export class GetReq {
 
     public static [GetEndpointEnum.ORDER_BOOK_LEVEL_2_20] = {
         symbol(s: CurrencyPair) {
-            return new Level2OrderBookReq(20, s);
+            return new Level2OrderBookReq(GetEndpointEnum.ORDER_BOOK_LEVEL_2_20, s);
         },
     };
 
     public static [GetEndpointEnum.ORDER_BOOK_LEVEL_2_100] = {
         symbol(s: CurrencyPair) {
-            return new Level2OrderBookReq(100, s);
+            return new Level2OrderBookReq(GetEndpointEnum.ORDER_BOOK_LEVEL_2_100, s);
+        },
+    };
+
+    public static [GetEndpointEnum.ORDER_BOOK_V3_LEVEL_2] = {
+        symbol(s: CurrencyPair) {
+            return new Level2OrderBookReq(GetEndpointEnum.ORDER_BOOK_V3_LEVEL_2, s);
         },
     };
 }

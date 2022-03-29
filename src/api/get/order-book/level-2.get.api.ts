@@ -14,8 +14,11 @@ export type OrderBookLevel2ParamsDto = {
 }
 
 export class Level2OrderBookReq extends BaseMethod<OrderBookLevel2ResDto, OrderBookLevel2ParamsDto> {
-    constructor(deep: 20 | 100, symbol: CurrencyPair) {
-        super('GET', deep === 20 ? GetEndpointEnum.ORDER_BOOK_LEVEL_2_20 : GetEndpointEnum.ORDER_BOOK_LEVEL_2_100, {
+    constructor(
+        endpoint: Extract<GetEndpointEnum, GetEndpointEnum.ORDER_BOOK_LEVEL_2_100 | GetEndpointEnum.ORDER_BOOK_LEVEL_2_20 | GetEndpointEnum.ORDER_BOOK_V3_LEVEL_2>,
+        symbol: CurrencyPair,
+    ) {
+        super('GET', endpoint, {
             symbol,
         });
     }
