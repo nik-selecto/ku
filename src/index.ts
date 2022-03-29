@@ -1,4 +1,3 @@
-import { KuRequest } from './api/index.api';
 import { Ku } from './common/ku';
 import { KU_STATE_TYPE } from './common/ku.mapper';
 import { pause } from './utils/pause';
@@ -7,8 +6,6 @@ import { Level2MarketBookCPS, publishLevel2MarketData } from './ws/types/ws-mark
 import { WsSendCPS } from './ws/ws.mapper';
 
 async function main() {
-    let loop = true;
-
     const ku = await Ku.init<KU_STATE_TYPE, [
         WsSendCPS,
         Level2MarketBookCPS,
@@ -20,17 +17,9 @@ async function main() {
         ku.message('ws-send', publishLevel2MarketData(['LUNA-USDT']));
     });
 
-    pause(10).then(() => {
-        loop = false;
-        ku.disconnect();
-    });
+    await pause(300);
 
-    while (loop) {
-        console.log(
-            // eslint-disable-next-line no-await-in-loop
-            await KuRequest.GET['/api/v3/market/orderbook/level2'].symbol('LUNA-USDT').exec(),
-        );
-    }
+    ku.disconnect();
 }
 
 main().catch((error) => {

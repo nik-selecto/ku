@@ -60,7 +60,7 @@ export async function wsInit() {
 
         ws.on('message', (message: string) => {
             const jMessage = JSON.parse(message) as WsSubAnyMessageType;
-            console.log(JSON.stringify(jMessage, null, 2));
+
             if (jMessage.type !== 'message') {
                 console.info(jMessage);
 
