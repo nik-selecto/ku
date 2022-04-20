@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { CurrencyPair } from '../../general/currency.general-type';
 import { BestOffer, OrderBookInputData, OrderBookWriterInterface } from '../order-book-writer.interface';
 
 // TODO read from .env
@@ -116,14 +117,20 @@ export class PgOrderBookWriter implements OrderBookWriterInterface {
         await pool.end();
     }
 
-    public async writeAsk(data: OrderBookInputData): Promise<BestOffer<'ask'>[]> {
+    public async writeAsk(symbol: CurrencyPair, price: string, amount: string, seq: string, top: number): Promise<BestOffer<'ask'>[]> {
+        console.log(symbol);
+        console.log(price);
+        console.log(amount);
+        console.log(seq);
+        console.log(top);
+
         const result = await this.pool.query(`--sql
             select * from gepsert_asks(
-                '${data.symbol}',
-                '${data.price}',
-                '${data.amount}',
-                '${data.seq}',
-                ${data.top}
+                '${symbol}',
+                '${price}',
+                '${amount}',
+                '${seq}',
+                ${top}
             );
         `);
 
@@ -132,14 +139,20 @@ export class PgOrderBookWriter implements OrderBookWriterInterface {
         return result as any;
     }
 
-    public async writeBid(data: OrderBookInputData): Promise<BestOffer<'bid'>[]> {
+    public async writeBid(symbol: CurrencyPair, price: string, amount: string, seq: string, top: number): Promise<BestOffer<'bid'>[]> {
+        console.log(symbol);
+        console.log(price);
+        console.log(amount);
+        console.log(seq);
+        console.log(top);
+
         const result = await this.pool.query(`--sql
             select * from gepsert_bids(
-                '${data.symbol}',
-                '${data.price}',
-                '${data.amount}',
-                '${data.seq}',
-                ${data.top}
+                '${symbol}',
+                '${price}',
+                '${amount}',
+                '${seq}',
+                ${top}
             );
         `);
 

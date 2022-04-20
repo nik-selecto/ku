@@ -17,7 +17,7 @@ async function main() {
         ku.message('ws-send', publishLevel2MarketData(['LUNA-USDT']));
     });
 
-    await pause(300);
+    await pause(30000);
 
     ku.disconnect();
 }

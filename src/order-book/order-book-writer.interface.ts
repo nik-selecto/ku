@@ -5,7 +5,6 @@ export type OrderBookInputData = {
   price: string,
   amount: string,
   seq: string,
-  top: number,
 };
 export type BestOffer<T extends ('ask' | 'bid')> = {
   type: T,
@@ -16,11 +15,11 @@ export type BestOffer<T extends ('ask' | 'bid')> = {
 
 export interface OrderBookWriterInterface {
   fromScratch: (preData: {
-    asks?: Omit<OrderBookInputData, 'top'>,
-    bids?: Omit<OrderBookInputData, 'top'>,
+    asks?: OrderBookInputData,
+    bids?: OrderBookInputData,
   }) => Promise<void>;
 
-  writeAsk: (data: OrderBookInputData) => Promise<BestOffer<'ask'>[]>;
+  writeAsk: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'ask'>[]>;
 
-  writeBid: (data: OrderBookInputData) => Promise<BestOffer<'bid'>[]>;
+  writeBid: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'bid'>[]>;
 }

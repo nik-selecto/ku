@@ -1,29 +1,14 @@
-import fs from 'fs';
-import { join } from 'path';
 import { Ku } from '../common/ku';
 import { KU_STATE_TYPE } from '../common/ku.mapper';
 import { WsSubjectEnum } from '../ws/types/enums/ws-subject.enum';
 import { Level2MarketBookCPS } from '../ws/types/ws-market-data-level-2.type';
-
-const acc: Record<string, {
-    asks: Record<string, {
-        amount: string,
-        sequence: string,
-    }>,
-    bids: Record<string, {
-        amount: string,
-        sequence: string,
-    }>,
-}> = {
-    'LUNA-USDT': {
-        asks: {
-        },
-        bids: {
-        },
-    },
-};
+import { getOrderBookWriter } from './get-order-book-writer';
 
 export async function initOrderBook() {
+    const writer = getOrderBookWriter('postgres');
+
+    await writer.fromScratch();
+
     const ku = await Ku.init<[
         KU_STATE_TYPE[0]
     ], [
@@ -35,48 +20,10 @@ export async function initOrderBook() {
         const { asks, bids } = changes;
 
         asks.forEach(([price, amount, sequence]) => {
-            const _price = (acc as any)[symbol].asks[price];
-
-            if (!_price) {
-                (acc as any)[symbol].asks[price] = {
-                    amount, sequence,
-                };
-            } else if (
-                parseFloat((acc as any)[symbol].asks[price].sequence) > parseFloat(sequence)
-            ) {
-                if (parseFloat(amount) === 0) {
-                    delete (acc as any)[symbol].asks[price];
-                } else {
-                    (acc as any)[symbol].asks[price] = {
-                        amount, sequence,
-                    };
-                }
-            }
+            writer.writeAsk(symbol, price, amount, sequence, 5);
         });
         bids.forEach(([price, amount, sequence]) => {
-            const _price = (acc as any)[symbol].bids[price];
-
-            if (!_price) {
-                (acc as any)[symbol].bids[price] = {
-                    amount, sequence,
-                };
-            } else if (
-                parseFloat((acc as any)[symbol].bids[price].sequence) > parseFloat(sequence)
-            ) {
-                if (parseFloat(amount) === 0) {
-                    delete (acc as any)[symbol].bids[price];
-                } else {
-                    (acc as any)[symbol].bids[price] = {
-                        amount, sequence,
-                    };
-                }
-            }
+            writer.writeBid(symbol, price, amount, sequence, 5);
         });
-
-        fs.writeFile(join(
-            __dirname,
-            '../../src/order-book',
-            'acc.json',
-        ), JSON.stringify(acc), { encoding: 'utf-8' }, () => { });
     });
 }
