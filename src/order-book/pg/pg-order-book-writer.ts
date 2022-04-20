@@ -1,7 +1,13 @@
 import { Pool } from 'pg';
+import { BestOffer, OrderBookInputData, OrderBookWriterInterface } from '../order-book-writer.interface';
+
+// TODO read from .env
+const connectionData = { user: 'postgres', password: 'postgres', database: 'ku' };
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { database: _, ...rawConnectionData } = connectionData;
 
 async function pre() {
-    const pool = new Pool({ user: 'postgres', password: 'postgres' });
+    const pool = new Pool(rawConnectionData);
 
     await pool.query(`--sql
         drop database if exists ku;
@@ -11,7 +17,7 @@ async function pre() {
     `);
     await pool.end();
 
-    return new Pool({ user: 'postgres', password: 'postgres', database: 'ku' });
+    return new Pool(connectionData);
 }
 
 type TableName = 'asks' | 'bids';
@@ -90,28 +96,55 @@ function gepsertFnQuery(name: TableName) {
     `;
 }
 
-async function main() {
-    const pool = await pre();
+export class PgOrderBookWriter implements OrderBookWriterInterface {
+    private pool!: Pool;
 
-    await pool.query(createTableQuery('asks'));
-    await pool.query(addInexSymbolPriceQuery('asks'));
-    await pool.query(gepsertFnQuery('asks'));
-
-    await pool.query(createTableQuery('bids'));
-    await pool.query(addInexSymbolPriceQuery('bids'));
-    const res = await pool.query(gepsertFnQuery('bids'));
-
-    console.log(res);
-
-    await pool.end();
-}
-
-(async () => {
-    try {
-        main();
-    } catch (error) {
-        console.error('=== ERROR ===');
-        console.error(error);
-        console.error('=============');
+    constructor(fresh: boolean = true) {
+        this.pool = new Pool(fresh ? rawConnectionData : connectionData);
     }
-})();
+
+    public async fromScratch(preData: { asks?: Omit<OrderBookInputData, 'top'>, bids?: Omit<OrderBookInputData, 'top'> } = {}) {
+        const { } = preData;
+        const pool = await pre();
+
+        await pool.query(createTableQuery('asks'));
+        await pool.query(addInexSymbolPriceQuery('asks'));
+        await pool.query(gepsertFnQuery('asks'));
+        await pool.query(createTableQuery('bids'));
+        await pool.query(addInexSymbolPriceQuery('bids'));
+        await pool.query(gepsertFnQuery('bids'));
+        await pool.end();
+    }
+
+    public async writeAsk(data: OrderBookInputData): Promise<BestOffer<'ask'>[]> {
+        const result = await this.pool.query(`--sql
+            select * from gepsert_asks(
+                '${data.symbol}',
+                '${data.price}',
+                '${data.amount}',
+                '${data.seq}',
+                ${data.top}
+            );
+        `);
+
+        console.log(result);
+
+        return result as any;
+    }
+
+    public async writeBid(data: OrderBookInputData): Promise<BestOffer<'bid'>[]> {
+        const result = await this.pool.query(`--sql
+            select * from gepsert_bids(
+                '${data.symbol}',
+                '${data.price}',
+                '${data.amount}',
+                '${data.seq}',
+                ${data.top}
+            );
+        `);
+
+        console.log(result);
+
+        return result as any;
+    }
+}
