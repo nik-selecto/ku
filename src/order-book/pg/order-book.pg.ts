@@ -14,11 +14,11 @@ async function pre() {
     return new Pool({ user: 'postgres', password: 'postgres', database: 'ku' });
 }
 
-async function main() {
-    const pool = await pre();
+type TableName = 'asks' | 'bids';
 
-    await pool.query(`--sql
-        create table asks (
+function createTableQuery(name: TableName) {
+    return `--sql
+        create table ${name} (
             _symbol varchar(16),
             _price float,
             _amount float,
@@ -27,10 +27,18 @@ async function main() {
             _amount_str varchar(20),
             _id serial primary key
         );
-    `);
+    `;
+}
 
-    const res = await pool.query(`--sql
-        create function gepsert(
+function addInexSymbolPriceQuery(name: TableName) {
+    return `--sql
+        create index ${name}_symbol_price_idx on ${name} (_symbol, _price);
+    `;
+}
+
+function gepsertFnQuery(name: TableName) {
+    return `--sql
+        create function gepsert_${name}(
             input_symbol varchar(16),
             input_price varchar(20),
             input_amount varchar(20),
@@ -45,16 +53,16 @@ async function main() {
             begin
                 if (
                     select true
-                    from asks as a
+                    from ${name} as a
                     where input_symbol = a._symbol
                         and input_price = a._price_str
                         and input_sequence::bigint > a._sequence
                 ) then
                     if (input_amount = '0') then
-                        delete from asks as a
+                        delete from ${name} as a
                         where a._price_str = input_price and a._symbol = input_symbol;
                     else
-                        update asks
+                        update ${name}
                         set
                             _amount = input_amount::float,
                             _amount_str = input_amount,
@@ -63,23 +71,35 @@ async function main() {
                     end if;
                 elseif (
                     not exists (select true
-                    from asks as a
+                    from ${name} as a
                         where input_symbol = a._symbol
                             and input_price = a._price_str)
                 ) then
-                    insert into asks(_symbol, _price, _amount, _sequence, _price_str, _amount_str)
+                    insert into ${name}(_symbol, _price, _amount, _sequence, _price_str, _amount_str)
                     values(input_symbol, input_price::float, input_amount::float, input_sequence::bigint, input_price, input_amount);
                 end if;
                 
                 --sql in any scenario (delete, update, insert or none) we return top best
                 return query 
-                    select 'ask'::varchar(5) as type, a._symbol, a._price_str as price, a._amount_str as amount
-                    from asks as a
-                    order by a._price
+                    select '${name === 'asks' ? 'ask' : 'bid'}'::varchar(5) as type, a._symbol, a._price_str as price, a._amount_str as amount
+                    from ${name} as a
+                    order by a._price ${name === 'asks' ? '' : 'desc'}
                     limit input_best_limit;
             end;
         $FUNCTION$;
-    `);
+    `;
+}
+
+async function main() {
+    const pool = await pre();
+
+    await pool.query(createTableQuery('asks'));
+    await pool.query(addInexSymbolPriceQuery('asks'));
+    await pool.query(gepsertFnQuery('asks'));
+
+    await pool.query(createTableQuery('bids'));
+    await pool.query(addInexSymbolPriceQuery('bids'));
+    const res = await pool.query(gepsertFnQuery('bids'));
 
     console.log(res);
 
