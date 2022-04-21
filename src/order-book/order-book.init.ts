@@ -5,10 +5,7 @@ import { Level2MarketBookCPS } from '../ws/types/ws-market-data-level-2.type';
 import { getOrderBookWriter } from './get-order-book-writer';
 
 export async function initOrderBook() {
-    const writer = getOrderBookWriter('postgres');
-
-    await writer.fromScratch();
-
+    const writer = await getOrderBookWriter('postgres').freshDb();
     const ku = await Ku.init<[
         KU_STATE_TYPE[0]
     ], [
@@ -20,10 +17,10 @@ export async function initOrderBook() {
         const { asks, bids } = changes;
 
         asks.forEach(([price, amount, sequence]) => {
-            writer.writeAsk(symbol, price, amount, sequence, 5);
+            writer.writeAsk(symbol, price, amount, sequence, 1);
         });
         bids.forEach(([price, amount, sequence]) => {
-            writer.writeBid(symbol, price, amount, sequence, 5);
+            writer.writeBid(symbol, price, amount, sequence, 1);
         });
     });
 }

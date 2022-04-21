@@ -39,7 +39,7 @@ function createTableQuery(name: TableName) {
 
 function addInexSymbolPriceQuery(name: TableName) {
     return `--sql
-        create index ${name}_symbol_price_idx on ${name} (_symbol, _price);
+        create index ${name}_symbol_price_seq_index on ${name} (_symbol, _price, _sequence);
     `;
 }
 
@@ -64,6 +64,7 @@ function gepsertFnQuery(name: TableName) {
                     where input_symbol = a._symbol
                         and input_price = a._price_str
                         and input_sequence::bigint > a._sequence
+                    limit 1
                 ) then
                     if (input_amount = '0') then
                         delete from ${name} as a
@@ -82,8 +83,10 @@ function gepsertFnQuery(name: TableName) {
                         where input_symbol = a._symbol
                             and input_price = a._price_str)
                 ) then
-                    insert into ${name}(_symbol, _price, _amount, _sequence, _price_str, _amount_str)
-                    values(input_symbol, input_price::float, input_amount::float, input_sequence::bigint, input_price, input_amount);
+                    if (input_amount <> '0') then
+                        insert into ${name}(_symbol, _price, _amount, _sequence, _price_str, _amount_str)
+                        values(input_symbol, input_price::float, input_amount::float, input_sequence::bigint, input_price, input_amount);
+                    end if;
                 end if;
                 
                 --sql in any scenario (delete, update, insert or none) we return top best
@@ -98,33 +101,39 @@ function gepsertFnQuery(name: TableName) {
 }
 
 export class PgOrderBookWriter implements OrderBookWriterInterface {
-    private pool!: Pool;
+    private constructor(private pool: Pool) { }
 
-    constructor(fresh: boolean = true) {
-        this.pool = new Pool(fresh ? rawConnectionData : connectionData);
-    }
+    public static async connect(fresh: boolean, preData: { asks?: OrderBookInputData, bids?: OrderBookInputData } = {}) {
+        const { asks, bids } = preData;
 
-    public async fromScratch(preData: { asks?: Omit<OrderBookInputData, 'top'>, bids?: Omit<OrderBookInputData, 'top'> } = {}) {
-        const { } = preData;
-        const pool = await pre();
+        if (fresh) {
+            const pool = await pre();
 
-        await pool.query(createTableQuery('asks'));
-        await pool.query(addInexSymbolPriceQuery('asks'));
-        await pool.query(gepsertFnQuery('asks'));
-        await pool.query(createTableQuery('bids'));
-        await pool.query(addInexSymbolPriceQuery('bids'));
-        await pool.query(gepsertFnQuery('bids'));
-        await pool.end();
+            await pool.query(createTableQuery('asks'));
+            await pool.query(addInexSymbolPriceQuery('asks'));
+            await pool.query(gepsertFnQuery('asks'));
+            await pool.query(createTableQuery('bids'));
+            await pool.query(addInexSymbolPriceQuery('bids'));
+            await pool.query(gepsertFnQuery('bids'));
+
+            return new PgOrderBookWriter(pool);
+        }
+
+        if (asks) {
+            // TODO
+            console.warn('Load predefined asks is not implemented yet');
+        }
+
+        if (bids) {
+            // TODO
+            console.warn('Load predefined bids is not implemented yet');
+        }
+
+        return new PgOrderBookWriter(new Pool(connectionData));
     }
 
     public async writeAsk(symbol: CurrencyPair, price: string, amount: string, seq: string, top: number): Promise<BestOffer<'ask'>[]> {
-        console.log(symbol);
-        console.log(price);
-        console.log(amount);
-        console.log(seq);
-        console.log(top);
-
-        const result = await this.pool.query(`--sql
+        const { rows } = await this.pool.query(`--sql
             select * from gepsert_asks(
                 '${symbol}',
                 '${price}',
@@ -134,19 +143,13 @@ export class PgOrderBookWriter implements OrderBookWriterInterface {
             );
         `);
 
-        console.log(result);
+        console.log(rows);
 
-        return result as any;
+        return rows as any;
     }
 
     public async writeBid(symbol: CurrencyPair, price: string, amount: string, seq: string, top: number): Promise<BestOffer<'bid'>[]> {
-        console.log(symbol);
-        console.log(price);
-        console.log(amount);
-        console.log(seq);
-        console.log(top);
-
-        const result = await this.pool.query(`--sql
+        const { rows } = await this.pool.query(`--sql
             select * from gepsert_bids(
                 '${symbol}',
                 '${price}',
@@ -156,8 +159,8 @@ export class PgOrderBookWriter implements OrderBookWriterInterface {
             );
         `);
 
-        console.log(result);
+        // console.log(rows);
 
-        return result as any;
+        return rows as any;
     }
 }

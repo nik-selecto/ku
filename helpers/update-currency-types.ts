@@ -12,8 +12,6 @@ async function main() {
         .map((c: string) => c.substring(0, c.indexOf('-')))
         .reduce((prev, next) => `${prev}' | '${next}`)}'`;
 
-    // console.log(jData);
-
     fs.writeFileSync(
         join(
             __dirname,

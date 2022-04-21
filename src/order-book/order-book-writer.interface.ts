@@ -14,11 +14,6 @@ export type BestOffer<T extends ('ask' | 'bid')> = {
 }
 
 export interface OrderBookWriterInterface {
-  fromScratch: (preData: {
-    asks?: OrderBookInputData,
-    bids?: OrderBookInputData,
-  }) => Promise<void>;
-
   writeAsk: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'ask'>[]>;
 
   writeBid: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'bid'>[]>;

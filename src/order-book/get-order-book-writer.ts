@@ -5,5 +5,10 @@ export function getOrderBookWriter(dbType: 'mongo' | 'postgres') {
         throw new Error('order-book-writer for mongo is not implemented yet');
     }
 
-    return new PgOrderBookWriter();
+    return {
+        async freshDb() {
+            return PgOrderBookWriter.connect(true);
+        },
+        // TODO not fresh, with preload data etc.
+    };
 }
