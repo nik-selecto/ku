@@ -1,5 +1,6 @@
 import { Ku } from '../common/ku';
 import { KU_STATE_TYPE } from '../common/ku.mapper';
+import { pause } from '../utils/pause';
 import { WsSubjectEnum } from '../ws/types/enums/ws-subject.enum';
 import { Level2MarketBookCPS } from '../ws/types/ws-market-data-level-2.type';
 import { getOrderBookWriter } from './get-order-book-writer';
@@ -23,4 +24,9 @@ export async function initOrderBook() {
             writer.writeBid(symbol, price, amount, sequence, 1);
         });
     });
+
+    await pause(5000);
+
+    // TODO this is hardcode!!!
+    writer.completeBookWithHttp('LUNA-USDT');
 }

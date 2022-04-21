@@ -1,4 +1,6 @@
+import { KuRequest } from '../../api/index.api';
 import { CurrencyPair } from '../../general/currency.general-type';
+import { pause } from '../../utils/pause';
 import { BestOffer, OrderBookWriterInterface } from '../order-book-writer.interface';
 
 type UniqueKey = `${CurrencyPair}-${number | string}`;
@@ -25,6 +27,16 @@ export class NodeOrderBookWriter implements OrderBookWriterInterface {
     constructor() {
         this.asksMap = new Map();
         this.bidsMap = new Map();
+    }
+
+    public async completeBookWithHttp(symbol: CurrencyPair) {
+        const res = await KuRequest.GET['/api/v1/market/orderbook/level2_100'].symbol(symbol).exec();
+
+        res?.asks.forEach(([price, amount]) => this.writeAsk(symbol, price, amount, res.sequence, 1));
+
+        await pause(500);
+
+        res?.bids.forEach(([price, amount]) => this.writeBid(symbol, price, amount, res.sequence, 1));
     }
 
     public writeAsk(symbol: CurrencyPair, price: string, amount: string, sequence: string, top: number): BestOffer<'ask'>[] {
