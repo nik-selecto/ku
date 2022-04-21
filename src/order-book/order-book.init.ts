@@ -5,7 +5,7 @@ import { Level2MarketBookCPS } from '../ws/types/ws-market-data-level-2.type';
 import { getOrderBookWriter } from './get-order-book-writer';
 
 export async function initOrderBook() {
-    const writer = await getOrderBookWriter('postgres').freshDb();
+    const writer = await getOrderBookWriter().node;
     const ku = await Ku.init<[
         KU_STATE_TYPE[0]
     ], [

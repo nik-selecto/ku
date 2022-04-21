@@ -14,7 +14,7 @@ export type BestOffer<T extends ('ask' | 'bid')> = {
 }
 
 export interface OrderBookWriterInterface {
-  writeAsk: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'ask'>[]>;
+  writeAsk: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'ask'>[]> | BestOffer<'ask'>[];
 
-  writeBid: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'bid'>[]>;
+  writeBid: (symbol: CurrencyPair, price: string, amount: string, seq: string, top: number) => Promise<BestOffer<'bid'>[]> | BestOffer<'bid'>[];
 }

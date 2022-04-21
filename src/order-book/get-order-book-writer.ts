@@ -1,14 +1,11 @@
+import { NodeOrderBookWriter } from './node/node-order-book-writer';
 import { PgOrderBookWriter } from './pg/pg-order-book-writer';
 
-export function getOrderBookWriter(dbType: 'mongo' | 'postgres') {
-    if (dbType === 'mongo') {
-        throw new Error('order-book-writer for mongo is not implemented yet');
-    }
-
+export function getOrderBookWriter() {
     return {
-        async freshDb() {
+        node: new NodeOrderBookWriter(),
+        async postgres() {
             return PgOrderBookWriter.connect(true);
         },
-        // TODO not fresh, with preload data etc.
     };
 }
